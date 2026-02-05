@@ -1,4 +1,4 @@
-import LostItem from '../Models/LostItem.js'
+import LostItem from '../models/LostItem.js'
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
   try {
@@ -8,7 +8,6 @@ export const getAllLostItems = async (req, res) => {
     res.status(500).json({ message: 'Server error' })
   }
 }
-
 
 export const addLostItem = async (req, res) => {
   const { name, description, location, dateLost } = req.body
@@ -22,7 +21,7 @@ export const addLostItem = async (req, res) => {
       name,
       description,
       location,
-      dateLost: new Date(dateLost), 
+      dateLost: new Date(dateLost),
     })
 
     res.status(201).json(newItem)
