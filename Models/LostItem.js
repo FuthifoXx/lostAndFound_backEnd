@@ -11,7 +11,7 @@ const lostItemSchema = mongoose.Schema(
      location: {
           type: String, required: true
      },
-     deteLost: {
+     dateLost: {
           type: Date, required: true
      }
      
