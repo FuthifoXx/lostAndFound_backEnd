@@ -1,4 +1,5 @@
 import LostItem from '../models/LostItem.js'
+
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
   try {
@@ -9,6 +10,17 @@ export const getAllLostItems = async (req, res) => {
   }
 }
 
+//Get only items created by the us
+export const getMyLostItems = async (req,res) => {
+  try {
+    const items = await LostItem.find({user: req.user._id})
+    res.json(items)
+  } catch (error) {
+    res.status(500).json({message: error.message})
+  }
+}
+
+// Create a lost item
 export const addLostItem = async (req, res) => {
   const { name, description, location, dateLost } = req.body
 
@@ -31,3 +43,4 @@ export const addLostItem = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
+
