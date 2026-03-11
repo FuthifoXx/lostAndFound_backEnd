@@ -18,6 +18,7 @@ export const addLostItem = async (req, res) => {
 
   try {
     const newItem = await LostItem.create({
+      user: req.user._id,
       name,
       description,
       location,

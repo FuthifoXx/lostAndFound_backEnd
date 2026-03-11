@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
 import lostItemsRoutes from './routes/lostItems.js'
+import authRoutes from './routes/authRoutes.js'
 
 dotenv.config()
 
@@ -16,6 +17,7 @@ app.use(express.json())
 
 // Routes
 app.use('/api/lost-items', lostItemsRoutes)
+app.use('/api/auth', authRoutes)
 
 // Test route
 app.get('/', (req, res) => {
