@@ -2,19 +2,27 @@ import express from 'express'
 import {
   getAllLostItems,
   addLostItem,
-  getMyLostItems
+  getMyLostItems,
+  updateLostItem,
+  deleteLostItem,
 } from '../controllers/lostItemsController.js'
 import protect from '../middleware/authmiddleware.js'
 
 const router = express.Router()
 
 // Get all lost items
-router.get('/', getAllLostItems)
+router.get('/',protect, getAllLostItems)
 
 // Get my lost item
-router.get('/my-items', protect, getAllLostItems)
+router.get('/my-items', protect, getMyLostItems)
 
 // Add a new lost item
 router.post('/', protect, addLostItem)
+
+// Update a lost item
+router.put('/:id', protect, updateLostItem)
+
+//Delete a lost item
+router.delete('/:id', protect, deleteLostItem)
 
 export default router

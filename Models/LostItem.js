@@ -18,7 +18,14 @@ const lostItemSchema = mongoose.Schema(
      },
      dateLost: {
           type: Date, required: true
-     }
+     },
+     //TODO make filtering easier in the frontend
+     // category: {
+     //      type: String,
+     //      enum: ['document','phone','wallet','keys','other'],
+     //      default: 'other'
+     // }
+     // image: {type: String}
      
 },
 {timestamps: true}

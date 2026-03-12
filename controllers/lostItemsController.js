@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import LostItem from '../models/LostItem.js'
 
 // Get all lost items
@@ -11,12 +12,12 @@ export const getAllLostItems = async (req, res) => {
 }
 
 //Get only items created by the us
-export const getMyLostItems = async (req,res) => {
+export const getMyLostItems = async (req, res) => {
   try {
-    const items = await LostItem.find({user: req.user._id})
+    const items = await LostItem.find({ user: req.user._id })
     res.json(items)
   } catch (error) {
-    res.status(500).json({message: error.message})
+    res.status(500).json({ message: error.message })
   }
 }
 
@@ -44,3 +45,55 @@ export const addLostItem = async (req, res) => {
   }
 }
 
+//Update a lost item
+export const updateLostItem = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+    // if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    //   return res.status(400).json({ message: 'Invalid item ID' })
+    // }
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+
+    //Ownership check
+    if (item.user.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: 'Not authorized' })
+    }
+
+    const { name, description, location, dateLost } = req.body
+
+    item.name = name || item.name
+    item.description = description || item.description
+    item.location = location || item.location
+    item.dateLost = dateLost || item.dateLost
+
+    const updatedItem = await item.save()
+
+    res.json(updatedItem)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+// Delete a lost item
+export const deleteLostItem = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+
+    //Ownership check
+    if (item.user.toString() !== req.user._id.toString()) {
+      return res.status(401).json({ message: 'Not authorized' })
+    }
+
+    await item.deleteOne()
+
+    res.json({ message: 'Lost item removed' })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
