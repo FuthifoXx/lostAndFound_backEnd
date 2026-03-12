@@ -4,7 +4,8 @@ import LostItem from '../models/LostItem.js'
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
   try {
-    const lostItems = await LostItem.find({})
+    const lostItems = await LostItem.find({}).populate('user', 'name email')
+
     res.json(lostItems)
   } catch (error) {
     res.status(500).json({ message: 'Server error' })
@@ -14,7 +15,10 @@ export const getAllLostItems = async (req, res) => {
 //Get only items created by the us
 export const getMyLostItems = async (req, res) => {
   try {
-    const items = await LostItem.find({ user: req.user._id })
+    const items = await LostItem.find({ user: req.user._id }).populate(
+      'user',
+      'name email',
+    )
     res.json(items)
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -61,12 +65,13 @@ export const updateLostItem = async (req, res) => {
       return res.status(401).json({ message: 'Not authorized' })
     }
 
-    const { name, description, location, dateLost } = req.body
+    const { name, description, location, dateLost, status } = req.body
 
     item.name = name || item.name
     item.description = description || item.description
     item.location = location || item.location
     item.dateLost = dateLost || item.dateLost
+    item.status = status || item.status
 
     const updatedItem = await item.save()
 

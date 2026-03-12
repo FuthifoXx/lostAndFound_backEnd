@@ -19,6 +19,11 @@ const lostItemSchema = mongoose.Schema(
      dateLost: {
           type: Date, required: true
      },
+     status: {
+          type: String,
+          enum: ['lost','found', 'claimed'],
+          default: 'lost'
+     }
      //TODO make filtering easier in the frontend
      // category: {
      //      type: String,
