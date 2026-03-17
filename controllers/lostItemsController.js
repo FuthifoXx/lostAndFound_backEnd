@@ -4,11 +4,28 @@ import LostItem from '../models/LostItem.js'
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
   try {
-    const lostItems = await LostItem.find({approved: true}).populate('user', 'name email')
+    const page = Number(req.query.page) || 1
+    const limit = Number(req.query.limit) || 5
 
-    res.json(lostItems)
+    const skip = (page - 1) * limit
+
+    const totalItems = await LostItem.countDocuments({ approved: true })
+
+    const items = await LostItem.find({ approved: true })
+    .sort({createdAt: -1})
+      .populate('user', 'name email')
+      .skip(skip)
+      .limit(limit)
+
+    res.json({
+      items,
+      page,
+      pages: Math.ceil(totalItems / limit),
+      totalItems,
+    })
   } catch (error) {
-    res.status(500).json({ message: 'Server error' })
+    console.log(error)
+    res.status(500).json({ message: error.message })
   }
 }
 
@@ -91,7 +108,10 @@ export const deleteLostItem = async (req, res) => {
     }
 
     //Ownership check
-    if (item.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    if (
+      item.user.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin'
+    ) {
       return res.status(401).json({ message: 'Not authorized' })
     }
 
@@ -104,13 +124,11 @@ export const deleteLostItem = async (req, res) => {
 }
 
 export const approveLostItem = async (req, res) => {
-
   try {
-
     const item = await LostItem.findById(req.params.id)
 
-    if(!item){
-      return res.status(404).json({message: 'Item not found'})
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
     }
 
     item.approved = true
@@ -118,6 +136,6 @@ export const approveLostItem = async (req, res) => {
     const updatedItem = await item.save()
     res.json(updatedItem)
   } catch (error) {
-    res.status(500).json({message: error.message})
+    res.status(500).json({ message: error.message })
   }
 }

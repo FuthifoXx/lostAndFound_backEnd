@@ -13,7 +13,7 @@ import admin from '../middleware/adminMiddleware.js'
 const router = express.Router()
 
 // Get all lost items
-router.get('/', protect, getAllLostItems)
+router.get('/', getAllLostItems)
 
 // Get my lost item
 router.get('/my-items', protect, getMyLostItems)

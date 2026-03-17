@@ -19,6 +19,8 @@ const protect = async (req,res,next) => {
 
                next()
           } catch (error) {
+               console.log("JWT ERROR:",error.message);
+               
                res.status(401).json({message: 'Not authorized, token failed'})
           }
      }
@@ -28,6 +30,8 @@ const protect = async (req,res,next) => {
        if (!token) {
          return res.status(401).json({ message: 'Not authorized, no token' })
        }
+       console.log("TOKEN:", token);
+       
 }
 
 export default protect
