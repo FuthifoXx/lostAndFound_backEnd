@@ -23,6 +23,10 @@ const lostItemSchema = mongoose.Schema(
           type: String,
           enum: ['lost','found', 'claimed'],
           default: 'lost'
+     },
+     approved: {
+          type: Boolean,
+          default: false
      }
      //TODO make filtering easier in the frontend
      // category: {

@@ -5,6 +5,7 @@ import {
   getMyLostItems,
   updateLostItem,
   deleteLostItem,
+  approveLostItem,
 } from '../controllers/lostItemsController.js'
 import protect from '../middleware/authmiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
@@ -26,5 +27,8 @@ router.put('/:id', protect, updateLostItem)
 
 //Delete a lost item
 router.delete('/:id', protect, admin, deleteLostItem)
+
+//ApproveLostItem
+router.put('/:id/approve', protect, admin, approveLostItem)
 
 export default router

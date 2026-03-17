@@ -4,7 +4,7 @@ import LostItem from '../models/LostItem.js'
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
   try {
-    const lostItems = await LostItem.find({}).populate('user', 'name email')
+    const lostItems = await LostItem.find({approved: true}).populate('user', 'name email')
 
     res.json(lostItems)
   } catch (error) {
@@ -100,5 +100,24 @@ export const deleteLostItem = async (req, res) => {
     res.json({ message: 'Lost item removed' })
   } catch (error) {
     res.status(500).json({ message: error.message })
+  }
+}
+
+export const approveLostItem = async (req, res) => {
+
+  try {
+
+    const item = await LostItem.findById(req.params.id)
+
+    if(!item){
+      return res.status(404).json({message: 'Item not found'})
+    }
+
+    item.approved = true
+
+    const updatedItem = await item.save()
+    res.json(updatedItem)
+  } catch (error) {
+    res.status(500).json({message: error.message})
   }
 }
