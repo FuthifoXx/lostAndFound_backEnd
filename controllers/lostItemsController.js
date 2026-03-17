@@ -91,7 +91,7 @@ export const deleteLostItem = async (req, res) => {
     }
 
     //Ownership check
-    if (item.user.toString() !== req.user._id.toString()) {
+    if (item.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(401).json({ message: 'Not authorized' })
     }
 
