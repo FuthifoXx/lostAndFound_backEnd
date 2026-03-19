@@ -20,9 +20,8 @@ const lostItemSchema = mongoose.Schema(
       required: true,
     },
     partener: {
-      type: String,
-      enum: ['Shoprite', 'Pick n Pay', 'Pep', 'Checkers', 'Other'],
-      default: 'Other',
+     type: mongoose.Schema.Types.ObjectId,
+     ref: 'Partner'
     },
     dateLost: {
       type: Date,

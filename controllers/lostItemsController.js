@@ -41,6 +41,7 @@ export const getAllLostItems = async (req, res) => {
     const items = await LostItem.find(filter)
       .sort({ createdAt: -1 })
       .populate('user', 'name email')
+      .populate('partner', 'name branch address')
       .skip(skip)
       .limit(limit)
 
@@ -59,10 +60,10 @@ export const getAllLostItems = async (req, res) => {
 //Get only items created by the us
 export const getMyLostItems = async (req, res) => {
   try {
-    const items = await LostItem.find({ user: req.user._id }).populate(
-      'user',
-      'name email',
-    )
+    const items = await LostItem.find({ user: req.user._id })
+      .populate('user', 'name email')
+      .populate('partner', 'name branch address')
+
     res.json(items)
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -83,7 +84,7 @@ export const addLostItem = async (req, res) => {
       name,
       description,
       location,
-      partner,
+      partner,//ObjectId
       dateLost: new Date(dateLost),
     })
 
@@ -172,8 +173,9 @@ export const approveLostItem = async (req, res) => {
 export const getPendingItems = async (req, res) => {
   try {
     const items = await LostItem.find({ approved: false })
+    .sort({ createdAt: -1 })
       .populate('user', 'name email')
-      .sort({ createdAt: -1 })
+      .populate('partner', 'name branch address')
 
     if (items.length === 0) {
       return res.json({ message: 'No pending items', items: [] })
