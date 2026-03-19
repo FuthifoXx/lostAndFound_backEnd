@@ -19,7 +19,7 @@ const lostItemSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    partener: {
+    partner: {
      type: mongoose.Schema.Types.ObjectId,
      ref: 'Partner'
     },
