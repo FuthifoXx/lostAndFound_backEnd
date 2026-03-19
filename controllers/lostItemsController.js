@@ -12,7 +12,7 @@ export const getAllLostItems = async (req, res) => {
     const totalItems = await LostItem.countDocuments({ approved: true })
 
     const items = await LostItem.find({ approved: true })
-    .sort({createdAt: -1})
+      .sort({ createdAt: -1 })
       .populate('user', 'name email')
       .skip(skip)
       .limit(limit)
@@ -136,6 +136,24 @@ export const approveLostItem = async (req, res) => {
     const updatedItem = await item.save()
     res.json(updatedItem)
   } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+//Waiting for approval
+export const getPendingItems = async (req, res) => {
+  try {
+    const items = await LostItem.find({ approved: false })
+      .populate('user', 'name email')
+      .sort({ createdAt: -1 })
+
+    if (items.length === 0) {
+      return res.json({ message: 'No pending items', items: [] })
+    }
+
+    res.json(items)
+  } catch (error) {
+    console.log(error)
     res.status(500).json({ message: error.message })
   }
 }

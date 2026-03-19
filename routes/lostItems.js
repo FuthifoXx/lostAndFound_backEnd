@@ -6,6 +6,7 @@ import {
   updateLostItem,
   deleteLostItem,
   approveLostItem,
+  getPendingItems
 } from '../controllers/lostItemsController.js'
 import protect from '../middleware/authmiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
@@ -14,6 +15,9 @@ const router = express.Router()
 
 // Get all lost items
 router.get('/', getAllLostItems)
+
+//Get pending items
+router.get('/pending', protect, admin, getPendingItems)
 
 // Get my lost item
 router.get('/my-items', protect, getMyLostItems)
