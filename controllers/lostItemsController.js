@@ -9,9 +9,30 @@ export const getAllLostItems = async (req, res) => {
 
     const skip = (page - 1) * limit
 
-    const totalItems = await LostItem.countDocuments({ approved: true })
+    //Search keyword
+    const keyword= req.query.keyword
+    ? {
+      $or: [
+        {name: {$regex: req.query.keyword, $options: 'i'}},
+        {description: {$regex: req.query.keyword,$options: 'i'}}
+      ]
+    }: {}
 
-    const items = await LostItem.find({ approved: true })
+    //Location filter
+    const location = req.query.location
+    ? {location: {$regex: req.query.location, $options: 'i'}}
+    : {}
+
+    //Combine filters
+    const filter = {
+      approved: true,
+      ...keyword,
+      ...location
+    }
+
+    const totalItems = await LostItem.countDocuments(filter)
+
+    const items = await LostItem.find(filter)
       .sort({ createdAt: -1 })
       .populate('user', 'name email')
       .skip(skip)
