@@ -23,11 +23,17 @@ export const getAllLostItems = async (req, res) => {
     ? {location: {$regex: req.query.location, $options: 'i'}}
     : {}
 
+    //Partner
+    const partner = req.query.partner
+    ? {partner: req.query.partner}
+    : {}
+
     //Combine filters
     const filter = {
       approved: true,
       ...keyword,
-      ...location
+      ...location,
+      ...partner
     }
 
     const totalItems = await LostItem.countDocuments(filter)
@@ -65,7 +71,7 @@ export const getMyLostItems = async (req, res) => {
 
 // Create a lost item
 export const addLostItem = async (req, res) => {
-  const { name, description, location, dateLost } = req.body
+  const { name, description, location, dateLost, partner } = req.body
 
   if (!name || !description || !location || !dateLost) {
     return res.status(400).json({ message: 'All fields are required' })
@@ -77,6 +83,7 @@ export const addLostItem = async (req, res) => {
       name,
       description,
       location,
+      partner,
       dateLost: new Date(dateLost),
     })
 
