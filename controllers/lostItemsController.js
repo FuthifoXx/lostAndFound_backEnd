@@ -98,7 +98,7 @@ export const updateLostItem = async (req, res) => {
   }
 }
 
-// Delete a lost item
+// Reject / Delete a lost item (Admin control) admin-aware + owner-aware
 export const deleteLostItem = async (req, res) => {
   try {
     const item = await LostItem.findById(req.params.id)
@@ -107,7 +107,7 @@ export const deleteLostItem = async (req, res) => {
       return res.status(404).json({ message: 'Item not found' })
     }
 
-    //Ownership check
+    //Ownership OR admin can delete
     if (
       item.user.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'

@@ -30,7 +30,7 @@ router.post('/', protect, addLostItem)
 router.put('/:id', protect, updateLostItem)
 
 //Delete a lost item
-router.delete('/:id', protect, admin, deleteLostItem)
+router.delete('/:id', protect, deleteLostItem)
 
 //ApproveLostItem
 router.put('/:id/approve', protect, admin, approveLostItem)
