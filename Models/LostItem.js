@@ -47,6 +47,10 @@ const lostItemSchema = mongoose.Schema(
     surname: String,
     initials: String,
     firstNames: [String],
+    matchedUser: {
+     type: mongoose.Schema.Types.ObjectId,
+     ref: 'User'
+    },
     //TODO make filtering easier in the frontend
     // category: {
     //      type: String,

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import LostItem from '../models/LostItem.js'
+import { findMatchingUser } from '../utils/matchUser.js'
 
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
@@ -81,12 +82,24 @@ export const addLostItem = async (req, res) => {
   try {
     const newItem = await LostItem.create({
       user: req.user._id,
-      name,
-      description,
+      identityType,
+      idNumber,
+      passportNumber,
+      surname,
+      initials,
+      firstNames,
       location,
-      partner,//ObjectId
+      partner,
       dateLost: new Date(dateLost),
     })
+
+    const matchedUser = await findMatchingUser(newItem)
+
+    if(matchedUser) {
+      newItem.matchedUser = matchedUser._id
+      newItem.status = 'matched'
+      await newItem.save()
+    }
 
     res.status(201).json(newItem)
   } catch (error) {
@@ -94,6 +107,8 @@ export const addLostItem = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
+
+
 
 //Update a lost item
 export const updateLostItem = async (req, res) => {
