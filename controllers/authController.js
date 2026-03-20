@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js' // Keep capitalized for now
+import { parseSAID } from '../utils/idParser.js'
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -9,12 +10,50 @@ const generateToken = (id) => {
 }
 
 // REGISTER
+
 export const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body
+    const {
+      identityType,
+      idNumber,
+      passportNumber,
+      surname,
+      initials,
+      firstNames,
+      phone,
+      email,
+      password,
+    } = req.body
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'All fields are required' })
+    if (
+      !identityType ||
+      !surname ||
+      !initials ||
+      !firstNames ||
+      !phone ||
+      !email ||
+      !password
+    ) {
+      return res.status(400).json({ message: 'Missing required fields' })
+    }
+
+    let dateOfBirth
+    let gender
+
+    // ✅ ONLY parse if RSA ID
+    if (identityType === 'RSA_ID') {
+      if (!idNumber) {
+        return res.status(400).json({ message: 'ID number required' })
+      }
+
+      const parsed = parseSAID(idNumber)
+      dateOfBirth = parsed.dateOfBirth
+      gender = parsed.gender
+    }
+
+    // ✅ Passport validation
+    if (identityType === 'PASSPORT' && !passportNumber) {
+      return res.status(400).json({ message: 'Passport number required' })
     }
 
     const userExists = await User.findOne({ email })
@@ -26,20 +65,27 @@ export const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt)
 
     const user = await User.create({
-      name,
+      identityType,
+      idNumber,
+      passportNumber,
+      surname,
+      initials,
+      firstNames,
+      phone,
       email,
       password: hashedPassword,
+      dateOfBirth,
+      gender,
     })
 
     res.status(201).json({
       _id: user._id,
-      name: user.name,
       email: user.email,
       token: generateToken(user._id),
     })
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: 'Server error' })
+    console.log(error)
+    res.status(500).json({ message: error.message })
   }
 }
 

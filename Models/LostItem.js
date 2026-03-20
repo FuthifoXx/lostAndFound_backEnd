@@ -24,9 +24,9 @@ const lostItemSchema = mongoose.Schema(
      ref: 'Partner'
     },
     dateLost: {
-      type: Date,
-      required: true,
-    },
+         type: Date,
+         required: true,
+     },
     approved: {
       type: Boolean,
       default: false,
@@ -36,6 +36,17 @@ const lostItemSchema = mongoose.Schema(
       enum: ['lost', 'found', 'claimed'],
       default: 'lost',
     },
+    identityType:{
+     type: String,
+     enum: ['RSA_ID', 'PASSPORT', 'OTHER']
+    }
+    ,
+    idNumber: String,
+    passportNumber: String,
+
+    surname: String,
+    initials: String,
+    firstNames: [String],
     //TODO make filtering easier in the frontend
     // category: {
     //      type: String,
