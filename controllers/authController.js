@@ -110,9 +110,10 @@ export const loginUser = async (req, res) => {
 
     res.json({
       _id: user._id,
-      name: user.name,
+      surname: user.surname,
+      firstName: user.firstNames,
       email: user.email,
-      user: user.role,
+      role: user.role,
       token: generateToken(user._id),
     })
   } catch (error) {

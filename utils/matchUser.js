@@ -3,7 +3,6 @@ import User from '../models/User.js'
 export const findMatchingUser = async (item) => {
   try {
     let matchedUser = null
-
     // 1. RSA ID (Strongest match)
     if (item.identityType === 'RSA_ID' && item.idNumber) {
       matchedUser = await User.findOne({
@@ -11,7 +10,6 @@ export const findMatchingUser = async (item) => {
         idNumber: item.idNumber,
       })
     }
-
     // 2. Passport match
     if (
       !matchedUser &&
@@ -23,7 +21,6 @@ export const findMatchingUser = async (item) => {
         passportNumber: item.passportNumber,
       })
     }
-
     // 3. Name-based fallback
     if (!matchedUser && item.identityType === 'OTHER') {
       matchedUser = await User.findOne({
@@ -38,4 +35,3 @@ export const findMatchingUser = async (item) => {
     return null
   }
 }
-

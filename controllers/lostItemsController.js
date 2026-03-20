@@ -11,30 +11,29 @@ export const getAllLostItems = async (req, res) => {
     const skip = (page - 1) * limit
 
     //Search keyword
-    const keyword= req.query.keyword
-    ? {
-      $or: [
-        {name: {$regex: req.query.keyword, $options: 'i'}},
-        {description: {$regex: req.query.keyword,$options: 'i'}}
-      ]
-    }: {}
+    const keyword = req.query.keyword
+      ? {
+          $or: [
+            { name: { $regex: req.query.keyword, $options: 'i' } },
+            { description: { $regex: req.query.keyword, $options: 'i' } },
+          ],
+        }
+      : {}
 
     //Location filter
     const location = req.query.location
-    ? {location: {$regex: req.query.location, $options: 'i'}}
-    : {}
+      ? { location: { $regex: req.query.location, $options: 'i' } }
+      : {}
 
     //Partner
-    const partner = req.query.partner
-    ? {partner: req.query.partner}
-    : {}
+    const partner = req.query.partner ? { partner: req.query.partner } : {}
 
     //Combine filters
     const filter = {
       approved: true,
       ...keyword,
       ...location,
-      ...partner
+      ...partner,
     }
 
     const totalItems = await LostItem.countDocuments(filter)
@@ -73,10 +72,26 @@ export const getMyLostItems = async (req, res) => {
 
 // Create a lost item
 export const addLostItem = async (req, res) => {
-  const { name, description, location, dateLost, partner } = req.body
+  const {
+    name,
+    description,
+    location,
+    dateLost,
+    partner,
+    identityType,
+    idNumber,
+    passportNumber,
+    surname,
+    initials,
+    firstNames,
+  } = req.body
 
   if (!name || !description || !location || !dateLost) {
     return res.status(400).json({ message: 'All fields are required' })
+  }
+
+  if (!identityType) {
+    return res.status(400).json({ message: 'Identity type required' })
   }
 
   try {
@@ -95,7 +110,7 @@ export const addLostItem = async (req, res) => {
 
     const matchedUser = await findMatchingUser(newItem)
 
-    if(matchedUser) {
+    if (matchedUser) {
       newItem.matchedUser = matchedUser._id
       newItem.status = 'matched'
       await newItem.save()
@@ -107,8 +122,6 @@ export const addLostItem = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
-
-
 
 //Update a lost item
 export const updateLostItem = async (req, res) => {
@@ -188,7 +201,7 @@ export const approveLostItem = async (req, res) => {
 export const getPendingItems = async (req, res) => {
   try {
     const items = await LostItem.find({ approved: false })
-    .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 })
       .populate('user', 'name email')
       .populate('partner', 'name branch address')
 
