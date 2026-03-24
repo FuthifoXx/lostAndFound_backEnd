@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import LostItem from '../models/LostItem.js'
 import { findMatchingUser } from '../utils/matchUser.js'
+import { notifyUser } from '../utils/notifyUser.js'
 
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
@@ -116,6 +117,8 @@ export const addLostItem = async (req, res) => {
       newItem.matchedUser = matchedUser._id
       newItem.status = 'matched'
       await newItem.save()
+
+      await notifyUser(matchedUser, newItem)
     }
 
     res.status(201).json(newItem)
