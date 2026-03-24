@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'
 
 const lostItemSchema = mongoose.Schema(
   {
@@ -20,27 +20,26 @@ const lostItemSchema = mongoose.Schema(
       required: true,
     },
     partner: {
-     type: mongoose.Schema.Types.ObjectId,
-     ref: 'Partner'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Partner',
     },
     dateLost: {
-         type: Date,
-         required: true,
-     },
+      type: Date,
+      required: true,
+    },
     approved: {
       type: Boolean,
       default: false,
     },
     status: {
       type: String,
-      enum: ['lost', 'found', 'claimed'],
+      enum: ['pending','matched', 'found', 'claimed'],
       default: 'pending',
     },
-    identityType:{
-     type: String,
-     enum: ['RSA_ID', 'PASSPORT', 'OTHER']
-    }
-    ,
+    identityType: {
+      type: String,
+      enum: ['RSA_ID', 'PASSPORT', 'OTHER'],
+    },
     idNumber: String,
     passportNumber: String,
 
@@ -48,8 +47,8 @@ const lostItemSchema = mongoose.Schema(
     initials: String,
     firstNames: [String],
     matchedUser: {
-     type: mongoose.Schema.Types.ObjectId,
-     ref: 'User'
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
     },
     //TODO make filtering easier in the frontend
     // category: {
@@ -63,4 +62,4 @@ const lostItemSchema = mongoose.Schema(
 )
 
 const LostItem = mongoose.model('LostItem', lostItemSchema)
-export default LostItem;
+export default LostItem

@@ -83,6 +83,7 @@ export const registerUser = async (req, res) => {
       email: user.email,
       token: generateToken(user._id),
     })
+    console.log(req.body)
   } catch (error) {
     console.log(error)
     res.status(500).json({ message: error.message })
@@ -111,7 +112,7 @@ export const loginUser = async (req, res) => {
     res.json({
       _id: user._id,
       surname: user.surname,
-      firstName: user.firstNames,
+      firstNames: user.firstNames,
       email: user.email,
       role: user.role,
       token: generateToken(user._id),
