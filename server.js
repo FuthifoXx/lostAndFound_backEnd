@@ -1,11 +1,11 @@
 import express from 'express'
 import dotenv from 'dotenv'
+dotenv.config()
+
 import connectDB from './config/db.js'
 import lostItemsRoutes from './routes/lostItems.js'
 import authRoutes from './routes/authRoutes.js'
 import partnerRoutes from './routes/partnerRoutes.js'
-
-dotenv.config()
 
 //Connect to MongoDB
 connectDB()

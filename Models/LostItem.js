@@ -23,6 +23,9 @@ const lostItemSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Partner',
     },
+    image: {
+      type: String,
+    },
     dateLost: {
       type: Date,
       required: true,
@@ -33,7 +36,7 @@ const lostItemSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending','matched', 'found', 'claimed'],
+      enum: ['pending', 'matched', 'found', 'claimed'],
       default: 'pending',
     },
     identityType: {

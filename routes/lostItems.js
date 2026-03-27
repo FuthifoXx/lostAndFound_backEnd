@@ -6,10 +6,12 @@ import {
   updateLostItem,
   deleteLostItem,
   approveLostItem,
-  getPendingItems
+  getPendingItems,
 } from '../controllers/lostItemsController.js'
-import protect from '../middleware/authmiddleware.js'
+import protect from '../middleware/authMiddleware.js'
+import partnerOrAdmin from '../middleware/partnerMiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
+import upload from '../middleware/uploadMiddleware.js'
 
 const router = express.Router()
 
@@ -23,11 +25,63 @@ router.get('/pending', protect, admin, getPendingItems)
 router.get('/my-items', protect, getMyLostItems)
 
 // Add a new lost item
-router.post('/', protect, addLostItem)
+// router.post('/', protect, addLostItem)
+
+//Upload image
+router.post('/', protect, partnerOrAdmin, upload.single('image'), addLostItem)
 
 // Update a lost item
-// TODO Update roles only the admin can update the found & claimed status
 router.put('/:id', protect, updateLostItem)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //Delete a lost item
 router.delete('/:id', protect, deleteLostItem)

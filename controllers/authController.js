@@ -23,6 +23,7 @@ export const registerUser = async (req, res) => {
       phone,
       email,
       password,
+      role,
     } = req.body
 
     if (
@@ -76,6 +77,7 @@ export const registerUser = async (req, res) => {
       password: hashedPassword,
       dateOfBirth,
       gender,
+      role: role === 'admin' ? 'admin' : 'user',
     })
 
     res.status(201).json({

@@ -2,6 +2,8 @@ import mongoose from 'mongoose'
 import LostItem from '../models/LostItem.js'
 import { findMatchingUser } from '../utils/matchUser.js'
 import { notifyUser } from '../utils/notifyUser.js'
+import cloudinary from '../config/cloudinary.js'
+import uploadToCloudinary from '../utils/uploadToCloudinary.js'
 
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
@@ -91,26 +93,33 @@ export const addLostItem = async (req, res) => {
     return res.status(400).json({ message: 'All fields are required' })
   }
 
-  if (!identityType) {
-    return res.status(400).json({ message: 'Identity type required' })
-  }
-
   try {
+    let imageUrl = null
+
+    // 🖼️ Upload image if exists
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer)
+      imageUrl = result.secure_url
+    }
+
     const newItem = await LostItem.create({
       user: req.user._id,
       name,
       description,
+      location,
+      partner,
+      dateLost: new Date(dateLost),
+      
       identityType,
       idNumber,
       passportNumber,
       surname,
       initials,
       firstNames,
-      location,
-      partner,
-      dateLost: new Date(dateLost),
+      image: imageUrl, // ✅ SAVE IMAGE
     })
 
+    // Matching logic
     const matchedUser = await findMatchingUser(newItem)
 
     if (matchedUser) {
