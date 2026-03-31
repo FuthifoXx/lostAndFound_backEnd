@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import LostItem from '../models/LostItem.js'
 import { findMatchingUser } from '../utils/matchUser.js'
 import { notifyUser } from '../utils/notifyUser.js'
+import sendEmail from '../utils/sendEmail.js'
 import cloudinary from '../config/cloudinary.js'
 import uploadToCloudinary from '../utils/uploadToCloudinary.js'
 
@@ -109,7 +110,7 @@ export const addLostItem = async (req, res) => {
       location,
       partner,
       dateLost: new Date(dateLost),
-      
+
       identityType,
       idNumber,
       passportNumber,
@@ -127,7 +128,20 @@ export const addLostItem = async (req, res) => {
       newItem.status = 'matched'
       await newItem.save()
 
-      await notifyUser(matchedUser, newItem)
+      // ✅ SEND EMAIL
+      await sendEmail(
+        matchedUser.email,
+        'Lost Item Found 🎉',
+        `Hello ${matchedUser.firstNames[0]},
+
+Good news! An item matching your details has been found.
+
+Location: ${newItem.location}
+
+Please visit the nearest partner to claim your item.
+
+- Lost & Found Team`,
+      )
     }
 
     res.status(201).json(newItem)

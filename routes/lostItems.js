@@ -33,56 +33,6 @@ router.post('/', protect, partnerOrAdmin, upload.single('image'), addLostItem)
 // Update a lost item
 router.put('/:id', protect, updateLostItem)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //Delete a lost item
 router.delete('/:id', protect, deleteLostItem)
 
