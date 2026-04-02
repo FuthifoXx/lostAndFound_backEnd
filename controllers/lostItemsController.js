@@ -3,6 +3,8 @@ import LostItem from '../models/LostItem.js'
 import { findMatchingUser } from '../utils/matchUser.js'
 import { notifyUser } from '../utils/notifyUser.js'
 import sendEmail from '../utils/sendEmail.js'
+import sendSMS from '../utils/sendSMS.js'
+import sendWhatsApp from '../utils/sendWhatsApp.js'
 import cloudinary from '../config/cloudinary.js'
 import uploadToCloudinary from '../utils/uploadToCloudinary.js'
 
@@ -121,28 +123,40 @@ export const addLostItem = async (req, res) => {
     })
 
     // Matching logic
-    const matchedUser = await findMatchingUser(newItem)
+   const matchedUser = await findMatchingUser(newItem)
 
-    if (matchedUser) {
-      newItem.matchedUser = matchedUser._id
-      newItem.status = 'matched'
-      await newItem.save()
+if (matchedUser) {
+  newItem.matchedUser = matchedUser._id
+  newItem.status = 'matched'
+  await newItem.save()
 
-      // ✅ SEND EMAIL
-      await sendEmail(
-        matchedUser.email,
-        'Lost Item Found 🎉',
-        `Hello ${matchedUser.firstNames[0]},
+  // ✅ EMAIL
+  await sendEmail(
+    matchedUser.email,
+    'Lost Item Found 🎉',
+    `Hello ${matchedUser.firstNames[0]}, your item was found at ${newItem.location}`
+  )
 
-Good news! An item matching your details has been found.
+  // ✅ SMS
+  await sendSMS(
+    matchedUser.phone,
+    `Hello ${matchedUser.firstNames[0]}, your item was found at ${newItem.location}`
+  )
 
-Location: ${newItem.location}
+  // ✅ WHATSAPP 🔥
+  await sendWhatsApp(
+    matchedUser.phone,
+    `Hello ${matchedUser.firstNames[0]} 👋
 
-Please visit the nearest partner to claim your item.
+Good news 🎉 Your item has been found!
 
-- Lost & Found Team`,
-      )
-    }
+📍 Location: ${newItem.location}
+
+Please visit the nearest partner to collect it.
+
+- Lost & Found Team`
+  )
+}
 
     res.status(201).json(newItem)
   } catch (error) {
