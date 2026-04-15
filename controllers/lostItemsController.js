@@ -7,6 +7,7 @@ import sendSMS from '../utils/sendSMS.js'
 import sendWhatsApp from '../utils/sendWhatsApp.js'
 import cloudinary from '../config/cloudinary.js'
 import uploadToCloudinary from '../utils/uploadToCloudinary.js'
+import notificationService from '../services/notificationService.js'
 
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
@@ -110,7 +111,7 @@ export const addLostItem = async (req, res) => {
       name,
       description,
       location,
-      partner,
+      partner: req.user.partner,
       dateLost: new Date(dateLost),
 
       identityType,
@@ -119,46 +120,29 @@ export const addLostItem = async (req, res) => {
       surname,
       initials,
       firstNames,
-      image: imageUrl, // ✅ SAVE IMAGE
+      image: imageUrl,
     })
 
-    // Matching logic
-   const matchedUser = await findMatchingUser(newItem)
+    console.log('NEW ITEM:', newItem)
 
-if (matchedUser) {
-  newItem.matchedUser = matchedUser._id
-  newItem.status = 'matched'
-  await newItem.save()
+    const matchedUser = await findMatchingUser(newItem)
 
-  // ✅ EMAIL
-  await sendEmail(
-    matchedUser.email,
-    'Lost Item Found 🎉',
-    `Hello ${matchedUser.firstNames[0]}, your item was found at ${newItem.location}`
-  )
+    console.log('MATCHED USER:', matchedUser)
 
-  // ✅ SMS
-  await sendSMS(
-    matchedUser.phone,
-    `Hello ${matchedUser.firstNames[0]}, your item was found at ${newItem.location}`
-  )
+    if (matchedUser) {
+      newItem.matchedUser = matchedUser._id
+      newItem.status = 'matched'
 
-  // ✅ WHATSAPP 🔥
-  await sendWhatsApp(
-    matchedUser.phone,
-    `Hello ${matchedUser.firstNames[0]} 👋
+      const updatedItem = await newItem.save()
 
-Good news 🎉 Your item has been found!
+      // ✅ SEND NOTIFICATION
+      await notificationService.sendMatchNotification(matchedUser, updatedItem)
 
-📍 Location: ${newItem.location}
+      return res.status(201).json(updatedItem)
+    }
 
-Please visit the nearest partner to collect it.
-
-- Lost & Found Team`
-  )
-}
-
-    res.status(201).json(newItem)
+    // ✅ NO MATCH CASE
+    return res.status(201).json(newItem)
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: error.message })
@@ -254,6 +238,82 @@ export const getPendingItems = async (req, res) => {
     res.json(items)
   } catch (error) {
     console.log(error)
+    res.status(500).json({ message: error.message })
+  }
+}
+
+//User Request Claim
+export const requestClaim = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+
+    // Only matched user can claim
+    if (
+      !item.matchedUser ||
+      item.matchedUser.toString() !== req.user._id.toString()
+    ) {
+      return res
+        .status(403)
+        .json({ message: 'Not authorized to claim this item' })
+    }
+
+    item.claimRequestedBy = req.user._id
+    item.claimStatus = 'pending'
+
+    await item.save()
+
+    res.json({ message: 'Claim request sent', item })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+//Partner Approves Claim
+export const approveClaim = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+
+    // Only partner who owns item
+    if (item.partner.toString() !== req.user.partner.toString()) {
+      return res.status(403).json({ message: 'Not your item' })
+    }
+
+    item.claimStatus = 'approved'
+    item.status = 'claimed'
+    item.claimedAt = new Date()
+
+    await item.save()
+
+    res.json({ message: 'Item claimed successfully', item })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+//Partner Rejects Claim
+export const rejectClaim = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+
+    item.claimStatus = 'rejected'
+    item.claimRequestedBy = null
+
+    await item.save()
+
+    res.json({ message: 'Claim rejected', item })
+  } catch (error) {
     res.status(500).json({ message: error.message })
   }
 }

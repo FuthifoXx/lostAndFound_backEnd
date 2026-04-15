@@ -7,6 +7,9 @@ import {
   deleteLostItem,
   approveLostItem,
   getPendingItems,
+  requestClaim,
+  approveClaim,
+  rejectClaim,
 } from '../controllers/lostItemsController.js'
 import protect from '../middleware/authMiddleware.js'
 import partnerOrAdmin from '../middleware/partnerMiddleware.js'
@@ -38,5 +41,14 @@ router.delete('/:id', protect, deleteLostItem)
 
 //ApproveLostItem
 router.put('/:id/approve', protect, admin, approveLostItem)
+
+// User requests claim
+router.put('/:id/claim', protect, requestClaim)
+
+// Partner approves claim
+router.put('/:id/approve-claim', protect, partnerOrAdmin, approveClaim)
+
+// Partner rejects claim
+router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
 
 export default router

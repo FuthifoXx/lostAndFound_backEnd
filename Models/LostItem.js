@@ -53,13 +53,16 @@ const lostItemSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
-    //TODO make filtering easier in the frontend
-    // category: {
-    //      type: String,
-    //      enum: ['document','phone','wallet','keys','other'],
-    //      default: 'other'
-    // }
-    // image: {type: String}
+    claimRequestedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    claimStatus: {
+      type: String,
+      enum: ['none', 'pending', 'approved', 'rejected'],
+      default: 'none',
+    },
+    claimedAt: Date,
   },
   { timestamps: true },
 )

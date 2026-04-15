@@ -5,19 +5,19 @@ const notificationSchema = mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
     },
-    item: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'LostItem',
-    },
-    message: {
+    type: {
       type: String,
-      required: true,
+      enum: ['MATCH_FOUND', 'ITEM_APPROVED'],
     },
-    read: {
-      type: Boolean,
-      default: false,
+    message: String,
+    channel: {
+      type: String,
+      enum: ['SMS', 'WHATSAPP'],
+    },
+    status: {
+      type: String,
+      enum: ['sent', 'failed'],
     },
   },
   { timestamps: true },

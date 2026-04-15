@@ -17,6 +17,10 @@ const partnerSchema = mongoose.Schema(
     contact: {
       type: String,
     },
+    isVerified:{
+      type: Boolean,
+      default: false,
+    }
   },
   { timestamps: true },
 )

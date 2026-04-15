@@ -1,11 +1,11 @@
 import express from 'express'
 import Partner from '../models/Partner.js'
-import protect from '../middleware/adminMiddleware.js'
+import protect from '../middleware/authMiddleware.js' 
 import admin from '../middleware/adminMiddleware.js'
 
 const router = express.Router()
 
-//Create partner (admin only)
+// Create partner (admin only)
 router.post('/', protect, admin, async (req, res) => {
   try {
     const partner = await Partner.create(req.body)
@@ -15,7 +15,7 @@ router.post('/', protect, admin, async (req, res) => {
   }
 })
 
-//Get all partners
+// Get all partners
 router.get('/', async (req, res) => {
   const partners = await Partner.find()
   res.json(partners)

@@ -75,6 +75,11 @@ const userSchema = mongoose.Schema(
       enum: ['user', 'admin', 'partner'],
       default: 'user',
     },
+    partner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Partner',
+
+    }
   },
   { timestamps: true },
 )
