@@ -1,4 +1,3 @@
-import mongoose from 'mongoose'
 import LostItem from '../models/LostItem.js'
 import { findMatchingUser } from '../utils/matchUser.js'
 import { notifyUser } from '../utils/notifyUser.js'
@@ -111,7 +110,7 @@ export const addLostItem = async (req, res) => {
       name,
       description,
       location,
-      partner: req.user.partner,
+      partner: partner || req.user.partner,
       dateLost: new Date(dateLost),
 
       identityType,
@@ -161,7 +160,11 @@ export const updateLostItem = async (req, res) => {
     }
 
     //Ownership check
-    if (item.user.toString() !== req.user._id.toString()) {
+    if (
+      item.user.toString() !== req.user._id.toString() &&
+      req.user.role !== 'admin' &&
+      req.user.role !== 'partner'
+    ) {
       return res.status(401).json({ message: 'Not authorized' })
     }
 
@@ -261,10 +264,16 @@ export const requestClaim = async (req, res) => {
         .json({ message: 'Not authorized to claim this item' })
     }
 
+    if (item.claimStatus === 'pending') {
+      return res.status(400).json({ message: 'Claim already requested' })
+    }
+
     item.claimRequestedBy = req.user._id
     item.claimStatus = 'pending'
 
     await item.save()
+
+    await notificationService.sendClaimRequestNotification(item)
 
     res.json({ message: 'Claim request sent', item })
   } catch (error) {
@@ -282,6 +291,10 @@ export const approveClaim = async (req, res) => {
     }
 
     // Only partner who owns item
+    if (!item.partner || !req.user.partner) {
+      return res.status(403).json({ message: 'Partner not assigned properly' })
+    }
+
     if (item.partner.toString() !== req.user.partner.toString()) {
       return res.status(403).json({ message: 'Not your item' })
     }
@@ -291,6 +304,8 @@ export const approveClaim = async (req, res) => {
     item.claimedAt = new Date()
 
     await item.save()
+
+    await notificationService.sendClaimRequestNotification(item)
 
     res.json({ message: 'Item claimed successfully', item })
   } catch (error) {
@@ -303,8 +318,11 @@ export const rejectClaim = async (req, res) => {
   try {
     const item = await LostItem.findById(req.params.id)
 
-    if (!item) {
-      return res.status(404).json({ message: 'Item not found' })
+    if (
+      !item.partner ||
+      item.partner.toString() !== req.user.partner.toString()
+    ) {
+      return res.status(404).json({ message: 'Not your item' })
     }
 
     item.claimStatus = 'rejected'
