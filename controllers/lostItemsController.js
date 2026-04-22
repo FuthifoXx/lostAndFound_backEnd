@@ -271,6 +271,8 @@ export const requestClaim = async (req, res) => {
     item.claimRequestedBy = req.user._id
     item.claimStatus = 'pending'
 
+    await item.populate('partner')
+    await item.populate('matchedUser')
     await item.save()
 
     await notificationService.sendClaimRequestNotification(item)
@@ -303,9 +305,11 @@ export const approveClaim = async (req, res) => {
     item.status = 'claimed'
     item.claimedAt = new Date()
 
+    await item.populate('partner')
+    await item.populate('matchedUser')
     await item.save()
 
-    await notificationService.sendClaimRequestNotification(item)
+    await notificationService.sendClaimApprovedNotification(item)
 
     res.json({ message: 'Item claimed successfully', item })
   } catch (error) {
