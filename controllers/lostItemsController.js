@@ -76,8 +76,25 @@ export const getMyLostItems = async (req, res) => {
   }
 }
 
+//Get a single lost item
+export const getLostItemById = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+
+    res.json(item)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
 // Create a lost item
 export const addLostItem = async (req, res) => {
+  console.log(req.file);
+  
   const {
     name,
     description,
@@ -134,13 +151,13 @@ export const addLostItem = async (req, res) => {
 
       const updatedItem = await newItem.save()
 
-      // ✅ SEND NOTIFICATION
+      //SEND NOTIFICATION
       await notificationService.sendMatchNotification(matchedUser, updatedItem)
 
       return res.status(201).json(updatedItem)
     }
 
-    // ✅ NO MATCH CASE
+    // NO MATCH CASE
     return res.status(201).json(newItem)
   } catch (error) {
     console.error(error)

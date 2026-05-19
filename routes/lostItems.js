@@ -10,6 +10,7 @@ import {
   requestClaim,
   approveClaim,
   rejectClaim,
+  getLostItemById,
 } from '../controllers/lostItemsController.js'
 import protect from '../middleware/authMiddleware.js'
 import partnerOrAdmin from '../middleware/partnerMiddleware.js'
@@ -17,6 +18,9 @@ import admin from '../middleware/adminMiddleware.js'
 import upload from '../middleware/uploadMiddleware.js'
 
 const router = express.Router()
+
+//Get a single item
+router.get('/:id', getLostItemById)
 
 // Get all lost items
 router.get('/', getAllLostItems)
