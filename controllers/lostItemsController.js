@@ -262,6 +262,20 @@ export const getPendingItems = async (req, res) => {
   }
 }
 
+export const getPendingClaims = async (req, res) => {
+  try {
+    const items = await LostItem.find({
+      claimStatus: 'pending',
+    })
+      .populate('matchedUser', 'email')
+      .populate('partner', 'name')
+
+    res.json(items)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
 //User Request Claim
 export const requestClaim = async (req, res) => {
   try {

@@ -1,4 +1,5 @@
 import express from 'express'
+
 import {
   getAllLostItems,
   addLostItem,
@@ -11,7 +12,9 @@ import {
   approveClaim,
   rejectClaim,
   getLostItemById,
+  getPendingClaims,
 } from '../controllers/lostItemsController.js'
+
 import protect from '../middleware/authMiddleware.js'
 import partnerOrAdmin from '../middleware/partnerMiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
@@ -19,40 +22,40 @@ import upload from '../middleware/uploadMiddleware.js'
 
 const router = express.Router()
 
-//Get a single item
-router.get('/:id', getLostItemById)
-
 // Get all lost items
 router.get('/', getAllLostItems)
 
-//Get pending items
+// Get pending items
 router.get('/pending', protect, admin, getPendingItems)
 
-// Get my lost item
+// Get my items
 router.get('/my-items', protect, getMyLostItems)
 
-// Add a new lost item
-// router.post('/', protect, addLostItem)
+// Get pending claims
+router.get('/pending-claims', protect, getPendingClaims)
 
-//Upload image
+// Add item
 router.post('/', protect, partnerOrAdmin, upload.single('image'), addLostItem)
 
-// Update a lost item
+// Update item
 router.put('/:id', protect, updateLostItem)
 
-//Delete a lost item
+// Delete item
 router.delete('/:id', protect, deleteLostItem)
 
-//ApproveLostItem
+// Approve item
 router.put('/:id/approve', protect, admin, approveLostItem)
 
-// User requests claim
+// Request claim
 router.put('/:id/claim', protect, requestClaim)
 
-// Partner approves claim
+// Approve claim
 router.put('/:id/approve-claim', protect, partnerOrAdmin, approveClaim)
 
-// Partner rejects claim
+// Reject claim
 router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
+
+// Get single item 
+router.get('/:id', getLostItemById)
 
 export default router
