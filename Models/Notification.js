@@ -15,7 +15,7 @@ const notificationSchema = mongoose.Schema(
 
     type: {
       type: String,
-      enum: ['MATCH_FOUND', 'CLAIM_REQUEST', 'CLAIM_APPROVED'],
+      enum: ['MATCH_FOUND', 'CLAIM_REQUEST', 'CLAIM_APPROVED', 'CLAIM_REJECTED'],
       required: true,
     },
 
