@@ -1,4 +1,6 @@
 import LostItem from '../models/LostItem.js'
+import User from '../models/User.js'
+import Notification from '../models/Notification.js'
 import { findMatchingUser } from '../utils/matchUser.js'
 import { notifyUser } from '../utils/notifyUser.js'
 import sendEmail from '../utils/sendEmail.js'
@@ -141,7 +143,29 @@ export const addLostItem = async (req, res) => {
 
     console.log('NEW ITEM:', newItem)
 
-    const matchedUser = await findMatchingUser(newItem)
+    // AUTO MATCHING
+    const matchedUser = await User.findOne({
+      idNumber: req.body.idNumber,
+    })
+
+    console.log('MATCHED USER:', matchedUser)
+
+    if (matchedUser) {
+      newItem.matchedUser = matchedUser._id
+
+      newItem.status = 'matched'
+
+      await newItem.save()
+
+      // CREATE NOTIFICATION
+      await Notification.create({
+        user: matchedUser._id,
+        item: newItem._id,
+        type: 'MATCH_FOUND',
+        message: `A possible match was found for your ${newItem.name}`,
+        channel: 'EMAIL',
+      })
+    }
 
     console.log('MATCHED USER:', matchedUser)
 

@@ -7,6 +7,10 @@ const lostItemSchema = mongoose.Schema(
       required: true,
       ref: 'User',
     },
+    matchedUser: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
     name: {
       type: String,
       required: true,
@@ -49,10 +53,6 @@ const lostItemSchema = mongoose.Schema(
     surname: String,
     initials: String,
     firstNames: [String],
-    matchedUser: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
     claimRequestedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
