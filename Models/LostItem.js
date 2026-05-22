@@ -40,7 +40,14 @@ const lostItemSchema = mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'matched', 'found', 'claimed'],
+      enum: [
+        'pending',
+        'matched',
+        'claim_requested',
+        'claim_approved',
+        'recovered',
+        'closed',
+      ],
       default: 'pending',
     },
     identityType: {
@@ -63,6 +70,8 @@ const lostItemSchema = mongoose.Schema(
       default: 'none',
     },
     claimedAt: Date,
+    recoveredAt: Date,
+    closedAt: Date,
   },
   { timestamps: true },
 )

@@ -9,6 +9,7 @@ import sendWhatsApp from '../utils/sendWhatsApp.js'
 import cloudinary from '../config/cloudinary.js'
 import uploadToCloudinary from '../utils/uploadToCloudinary.js'
 import notificationService from '../services/notificationService.js'
+import { response } from 'express'
 
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
@@ -398,5 +399,58 @@ export const rejectClaim = async (req, res) => {
     res.json({ message: 'Claim rejected', item })
   } catch (error) {
     res.status(500).json({ message: error.message })
+  }
+}
+
+//Mark as recovered
+export const markAsRecovered = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+
+    if (!item) {
+      return res.status(404).json({
+        message: 'Item not found',
+      })
+    }
+
+    item.status = 'recovered'
+    item.recoveredAt = new Date()
+
+    await item.save()
+
+    res.json({
+      message: 'Item marked as recovered',
+      item,
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    })
+  }
+}
+
+export const closeCase = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+
+    if (!item) {
+      return res.status(404).json({
+        message: 'Item not found',
+      })
+    }
+
+    item.status = 'closed'
+    item.closedAt = new Date()
+
+    await item.save()
+
+    res.json({
+      message: 'Case closed',
+      item,
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    })
   }
 }

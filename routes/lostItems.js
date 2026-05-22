@@ -13,6 +13,8 @@ import {
   rejectClaim,
   getLostItemById,
   getPendingClaims,
+  markAsRecovered,
+  closeCase
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -58,4 +60,19 @@ router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
 // Get single item 
 router.get('/:id', getLostItemById)
 
+//Mark item as recovered 
+router.put(
+  '/:id/recover',
+  protect,
+  partnerOrAdmin,
+  markAsRecovered
+)
+
+//Close case
+router.put(
+  '/:id/close',
+  protect,
+  partnerOrAdmin,
+  closeCase
+)
 export default router
