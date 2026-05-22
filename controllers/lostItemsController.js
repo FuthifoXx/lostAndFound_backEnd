@@ -95,8 +95,8 @@ export const getLostItemById = async (req, res) => {
 
 // Create a lost item
 export const addLostItem = async (req, res) => {
-  console.log(req.file);
-  
+  console.log(req.file)
+
   const {
     name,
     description,
@@ -144,26 +144,20 @@ export const addLostItem = async (req, res) => {
     console.log('NEW ITEM:', newItem)
 
     // AUTO MATCHING
-    const matchedUser = await User.findOne({
-      idNumber: req.body.idNumber,
-    })
 
-    console.log('MATCHED USER:', matchedUser)
+    let matchedUser = null
 
-    if (matchedUser) {
-      newItem.matchedUser = matchedUser._id
+    // Match RSA ID
+    if (newItem.identityType === 'RSA_ID' && newItem.idNumber) {
+      matchedUser = await User.findOne({
+        idNumber: newItem.idNumber,
+      })
+    }
 
-      newItem.status = 'matched'
-
-      await newItem.save()
-
-      // CREATE NOTIFICATION
-      await Notification.create({
-        user: matchedUser._id,
-        item: newItem._id,
-        type: 'MATCH_FOUND',
-        message: `A possible match was found for your ${newItem.name}`,
-        channel: 'EMAIL',
+    // Match Passport
+    if (newItem.identityType === 'PASSPORT' && newItem.passportNumber) {
+      matchedUser = await User.findOne({
+        passportNumber: newItem.passportNumber,
       })
     }
 
@@ -175,11 +169,23 @@ export const addLostItem = async (req, res) => {
 
       const updatedItem = await newItem.save()
 
-      //SEND NOTIFICATION
+      // CREATE NOTIFICATION
+      await Notification.create({
+        user: matchedUser._id,
+        item: updatedItem._id,
+        type: 'MATCH_FOUND',
+        message: `A possible match was found for your ${updatedItem.name}`,
+        channel: 'EMAIL',
+      })
+
+      // OPTIONAL EXTRA SERVICE
       await notificationService.sendMatchNotification(matchedUser, updatedItem)
 
       return res.status(201).json(updatedItem)
     }
+
+    // NO MATCH CASE
+    return res.status(201).json(newItem)
 
     // NO MATCH CASE
     return res.status(201).json(newItem)
