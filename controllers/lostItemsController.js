@@ -488,3 +488,18 @@ export const getDashboardStats = async (req, res) => {
     })
   }
 }
+
+export const getPartnerItems = async (req, res) => {
+  try {
+    const items = await LostItem.find({
+      partner: req.user.partner,
+    })
+      .sort({ createdAt: -1 })
+      .populate('matchedUser', 'email firstNames surname')
+      .populate('partner', 'name branch address')
+
+    res.json(items)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}

@@ -16,6 +16,7 @@ import {
   markAsRecovered,
   closeCase,
   getDashboardStats,
+  getPartnerItems,
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -24,7 +25,6 @@ import admin from '../middleware/adminMiddleware.js'
 import upload from '../middleware/uploadMiddleware.js'
 
 const router = express.Router()
-
 
 // Get all lost items
 router.get('/', getAllLostItems)
@@ -40,6 +40,9 @@ router.get('/pending-claims', protect, getPendingClaims)
 
 // Add item
 router.post('/', protect, partnerOrAdmin, upload.single('image'), addLostItem)
+
+//Get Partner items
+get('/partner/items', protect, partnerOrAdmin, getPartnerItems)
 
 // Update item
 router.put('/:id', protect, updateLostItem)
