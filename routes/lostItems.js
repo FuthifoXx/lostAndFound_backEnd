@@ -14,7 +14,8 @@ import {
   getLostItemById,
   getPendingClaims,
   markAsRecovered,
-  closeCase
+  closeCase,
+  getDashboardStats,
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -23,6 +24,7 @@ import admin from '../middleware/adminMiddleware.js'
 import upload from '../middleware/uploadMiddleware.js'
 
 const router = express.Router()
+
 
 // Get all lost items
 router.get('/', getAllLostItems)
@@ -57,22 +59,15 @@ router.put('/:id/approve-claim', protect, partnerOrAdmin, approveClaim)
 // Reject claim
 router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
 
-// Get single item 
+//Dashboard statistices
+router.get('/stats/dashboard', protect, getDashboardStats)
+
+// Get single item
 router.get('/:id', getLostItemById)
 
-//Mark item as recovered 
-router.put(
-  '/:id/recover',
-  protect,
-  partnerOrAdmin,
-  markAsRecovered
-)
+//Mark item as recovered
+router.put('/:id/recover', protect, partnerOrAdmin, markAsRecovered)
 
 //Close case
-router.put(
-  '/:id/close',
-  protect,
-  partnerOrAdmin,
-  closeCase
-)
+router.put('/:id/close', protect, partnerOrAdmin, closeCase)
 export default router

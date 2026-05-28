@@ -454,3 +454,37 @@ export const closeCase = async (req, res) => {
     })
   }
 }
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    const totalItems = await LostItem.countDocuments()
+
+    const matchedItems = await LostItem.countDocuments({
+      status: 'matched',
+    })
+
+    const pendingClaims = await LostItem.countDocuments({
+      claimStatus: 'pending',
+    })
+
+    const recoveredItems = await LostItem.countDocuments({
+      status: 'recovered',
+    })
+
+    const closedCases = await LostItem.countDocuments({
+      status: 'closed',
+    })
+
+    res.json({
+      totalItems,
+      matchedItems,
+      pendingClaims,
+      recoveredItems,
+      closedCases,
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    })
+  }
+}
