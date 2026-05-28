@@ -17,6 +17,7 @@ import {
   closeCase,
   getDashboardStats,
   getPartnerItems,
+  getAdminDashboardData
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -42,7 +43,10 @@ router.get('/pending-claims', protect, getPendingClaims)
 router.post('/', protect, partnerOrAdmin, upload.single('image'), addLostItem)
 
 //Get Partner items
-get('/partner/items', protect, partnerOrAdmin, getPartnerItems)
+router.get('/partner/items', protect, partnerOrAdmin, getPartnerItems)
+
+//Get Admin Dashboard Data
+router.get('/admin/dashboard', protect, admin, getAdminDashboardData)
 
 // Update item
 router.put('/:id', protect, updateLostItem)

@@ -503,3 +503,43 @@ export const getPartnerItems = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
+
+//Get admin dashboard data
+export const getAdminDashboardData = async (req, res) => {
+  try {
+    const totalItems = await LostItem.countDocuments()
+    const pendingItems = await LostItem.countDocuments({ approved: false })
+    const matchedItems = await LostItem.countDocuments({ status: 'matched' })
+    const pendingClaims = await LostItem.countDocuments({
+      claimStatus: 'pending',
+    })
+    const recoveredItems = await LostItem.countDocuments({
+      status: 'recovered',
+    })
+
+    const recentPendingItems = await LostItem.find({ approved: false })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('partner', 'name branch')
+
+    const recentPendingClaims = await LostItem.find({ claimStatus: 'pending' })
+      .sort({ updatedAt: -1 })
+      .limit(5)
+      .populate('matchedUser', 'email firstNames surname')
+      .populate('partner', 'name branch')
+
+    res.json({
+      stats: {
+        totalItems,
+        pendingItems,
+        matchedItems,
+        pendingClaims,
+        recoveredItems,
+      },
+      recentPendingItems,
+      recentPendingClaims,
+    })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
