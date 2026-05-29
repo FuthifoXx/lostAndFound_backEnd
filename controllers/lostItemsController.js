@@ -541,5 +541,58 @@ export const getAdminDashboardData = async (req, res) => {
   }
 }
 
+export const getRecoveryHistory = async (req, res) => {
+  try {
+    const items = await LostItem.find({
+      status: { $in: ['recovered', 'closed'] },
+    })
+      .sort({ updatedAt: -1 })
+      .populate('matchedUser', 'email')
+      .populate('partner', 'name branch')
 
-  
+    res.json(items)
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    })
+  }
+}
+
+//Get Recovery Analytics
+export const getRecoveryAnalytics = async (req, res) => {
+  try {
+    const totalItems = await LostItem.countDocuments()
+
+    const recoveredItems = await LostItem.countDocuments({
+      status: 'recovered',
+    })
+
+    const closedCases = await LostItem.countDocuments({
+      status: 'closed',
+    })
+
+    const matchedItems = await LostItem.countDocuments({
+      status: 'matched',
+    })
+
+    const claimedItems = await LostItem.countDocuments({
+      status: 'claimed',
+    })
+
+    const recoveryRate =
+      totalItems > 0 ? ((recoveredItems + closedCases) / totalItems) * 100 : 0
+
+    res.json({
+      totalItems,
+      recoveredItems,
+      closedCases,
+      matchedItems,
+      claimedItems,
+      recoveryRate: recoveryRate.toFixed(1),
+    })
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    })
+  }
+}

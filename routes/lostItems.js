@@ -18,6 +18,8 @@ import {
   getDashboardStats,
   getPartnerItems,
   getAdminDashboardData,
+  getRecoveryHistory,
+  getRecoveryAnalytics,
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -69,11 +71,17 @@ router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
 //Dashboard statistices
 router.get('/stats/dashboard', protect, getDashboardStats)
 
+//Get Recovery History
+router.get('/recovery-history', protect, partnerOrAdmin, getRecoveryHistory)
+
 //Mark item as recovered
 router.put('/:id/recover', protect, partnerOrAdmin, markAsRecovered)
 
 //Close Case
 router.put('/:id/close', protect, partnerOrAdmin, closeCase)
+
+//Get Recovery Analytics
+router.get('/analytics/recovery', protect, partnerOrAdmin, getRecoveryAnalytics)
 
 // Get single item
 router.get('/:id', getLostItemById)
