@@ -42,9 +42,9 @@ const lostItemSchema = mongoose.Schema(
       type: String,
       enum: [
         'pending',
+        'approved',
         'matched',
-        'claim_requested',
-        'claim_approved',
+        'claimed',
         'recovered',
         'closed',
       ],

@@ -17,7 +17,7 @@ import {
   closeCase,
   getDashboardStats,
   getPartnerItems,
-  getAdminDashboardData
+  getAdminDashboardData,
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -69,12 +69,14 @@ router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
 //Dashboard statistices
 router.get('/stats/dashboard', protect, getDashboardStats)
 
-// Get single item
-router.get('/:id', getLostItemById)
-
 //Mark item as recovered
 router.put('/:id/recover', protect, partnerOrAdmin, markAsRecovered)
 
-//Close case
+//Close Case
 router.put('/:id/close', protect, partnerOrAdmin, closeCase)
+
+// Get single item
+router.get('/:id', getLostItemById)
+
+
 export default router

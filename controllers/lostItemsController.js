@@ -187,9 +187,6 @@ export const addLostItem = async (req, res) => {
 
     // NO MATCH CASE
     return res.status(201).json(newItem)
-
-    // NO MATCH CASE
-    return res.status(201).json(newItem)
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: error.message })
@@ -543,3 +540,6 @@ export const getAdminDashboardData = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
+
+
+  
