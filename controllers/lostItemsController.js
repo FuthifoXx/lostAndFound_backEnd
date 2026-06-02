@@ -603,30 +603,80 @@ export const getBranchPerformance = async (req, res) => {
     const performance = await LostItem.aggregate([
       {
         $match: {
-          status: {
-            $in: ['recovered', 'closed'],
-          },
+          partner: { $ne: null },
         },
       },
       {
         $group: {
           _id: '$partner',
-          recoveredCount: {
-            $sum: 1,
+          totalItems: { $sum: 1 },
+          recoveredItems: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'recovered'] }, 1, 0],
+            },
+          },
+          closedCases: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'closed'] }, 1, 0],
+            },
+          },
+          matchedItems: {
+            $sum: {
+              $cond: [{ $eq: ['$status', 'matched'] }, 1, 0],
+            },
+          },
+        },
+      },
+      {
+        $lookup: {
+          from: 'partners',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'partner',
+        },
+      },
+      {
+        $unwind: '$partner',
+      },
+      {
+        $project: {
+          partnerId: '$_id',
+          partnerName: '$partner.name',
+          branch: '$partner.branch',
+          address: '$partner.address',
+          totalItems: 1,
+          recoveredItems: 1,
+          closedCases: 1,
+          matchedItems: 1,
+          recoveryRate: {
+            $cond: [
+              { $gt: ['$totalItems', 0] },
+              {
+                $multiply: [
+                  {
+                    $divide: [
+                      { $add: ['$recoveredItems', '$closedCases'] },
+                      '$totalItems',
+                    ],
+                  },
+                  100,
+                ],
+              },
+              0,
+            ],
           },
         },
       },
       {
         $sort: {
-          recoveredCount: -1,
+          recoveredItems: -1,
+          closedCases: -1,
         },
       },
     ])
 
     res.json(performance)
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    })
+    res.status(500).json({ message: error.message })
   }
 }

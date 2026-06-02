@@ -85,7 +85,7 @@ router.put('/:id/close', protect, partnerOrAdmin, closeCase)
 router.get('/analytics/recovery', protect, partnerOrAdmin, getRecoveryAnalytics)
 
 //Get Branch Perfomance
-router.get('/analytics/brances', protect, admin, getBranchPerformance)
+router.get('/analytics/branches', protect, admin, getBranchPerformance)
 
 // Get single item
 router.get('/:id', getLostItemById)
