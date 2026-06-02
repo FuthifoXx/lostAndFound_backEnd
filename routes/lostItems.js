@@ -20,6 +20,7 @@ import {
   getAdminDashboardData,
   getRecoveryHistory,
   getRecoveryAnalytics,
+  getBranchPerformance,
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -83,8 +84,10 @@ router.put('/:id/close', protect, partnerOrAdmin, closeCase)
 //Get Recovery Analytics
 router.get('/analytics/recovery', protect, partnerOrAdmin, getRecoveryAnalytics)
 
+//Get Branch Perfomance
+router.get('/analytics/brances', protect, admin, getBranchPerformance)
+
 // Get single item
 router.get('/:id', getLostItemById)
-
 
 export default router

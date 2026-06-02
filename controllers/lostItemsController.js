@@ -596,3 +596,37 @@ export const getRecoveryAnalytics = async (req, res) => {
     })
   }
 }
+
+//Get Branche Performance
+export const getBranchPerformance = async (req, res) => {
+  try {
+    const performance = await LostItem.aggregate([
+      {
+        $match: {
+          status: {
+            $in: ['recovered', 'closed'],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$partner',
+          recoveredCount: {
+            $sum: 1,
+          },
+        },
+      },
+      {
+        $sort: {
+          recoveredCount: -1,
+        },
+      },
+    ])
+
+    res.json(performance)
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    })
+  }
+}
