@@ -680,3 +680,61 @@ export const getBranchPerformance = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
+
+//Get Item Timeline
+export const getItemTimeline = async (req, res) => {
+  try {
+    const item = await LostItem.findById(req.params.id)
+      .populate('matchedUser', 'email firstNames surname')
+      .populate('partner', 'name branch address')
+
+    if (!item) {
+      return res.status(404).json({ message: 'Item not found' })
+    }
+
+    const timeline = [
+      {
+        label: 'Uploaded',
+        completed: true,
+        date: item.createdAt,
+      },
+      {
+        label: 'Approved',
+        completed: item.approved,
+        date: item.approved ? item.updatedAt : null,
+      },
+      {
+        label: 'Matched',
+        completed: Boolean(item.matchedUser),
+        date: item.matchedUser ? item.updatedAt : null,
+      },
+      {
+        label: 'Claim Requested',
+        completed: item.claimStatus !== 'none',
+        date: item.claimStatus !== 'none' ? item.updatedAt : null,
+      },
+      {
+        label: 'Claim Approved',
+        completed: item.claimStatus === 'approved',
+        date: item.claimedAt,
+      },
+      {
+        label: 'Recovered',
+        completed: item.status === 'recovered' || item.status === 'closed',
+        date: item.recoveredAt,
+      },
+      {
+        label: 'Closed',
+        completed: item.status === 'closed',
+        date: item.closedAt,
+      },
+    ]
+
+    res.json({
+      item,
+      timeline,
+    })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}

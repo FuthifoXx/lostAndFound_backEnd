@@ -1,24 +1,24 @@
 import express from 'express'
-import Partner from '../models/Partner.js'
-import protect from '../middleware/authMiddleware.js' 
+import {
+  createPartner,
+  getPartners,
+  assignUserToPartner,
+} from '../controllers/partnerController.js'
+
+import protect from '../middleware/authMiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
 
 const router = express.Router()
 
-// Create partner (admin only)
-router.post('/', protect, admin, async (req, res) => {
-  try {
-    const partner = await Partner.create(req.body)
-    res.status(201).json(partner)
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
+router.post('/', protect, admin, createPartner)
 
-// Get all partners
-router.get('/', async (req, res) => {
-  const partners = await Partner.find()
-  res.json(partners)
-})
+router.get('/', protect, admin, getPartners)
+
+router.put(
+  '/:partnerId/assign-user/:userId',
+  protect,
+  admin,
+  assignUserToPartner,
+)
 
 export default router

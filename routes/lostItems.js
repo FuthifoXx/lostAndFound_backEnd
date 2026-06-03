@@ -21,6 +21,7 @@ import {
   getRecoveryHistory,
   getRecoveryAnalytics,
   getBranchPerformance,
+  getItemTimeline
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -86,6 +87,9 @@ router.get('/analytics/recovery', protect, partnerOrAdmin, getRecoveryAnalytics)
 
 //Get Branch Perfomance
 router.get('/analytics/branches', protect, admin, getBranchPerformance)
+
+//Get Item Time Line
+router.get('/:id/timeline', protect, partnerOrAdmin, getItemTimeline)
 
 // Get single item
 router.get('/:id', getLostItemById)
