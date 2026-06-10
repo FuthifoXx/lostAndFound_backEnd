@@ -127,6 +127,13 @@ export const addLostItem = async (req, res) => {
       imageUrl = result.secure_url
     }
 
+    const formattedFirstNames = Array.isArray(firstNames)
+      ? firstNames
+      : firstNames
+          ?.split(' ')
+          .map((name) => name.trim())
+          .filter(Boolean)
+
     const newItem = await LostItem.create({
       user: req.user._id,
       name,
@@ -141,7 +148,7 @@ export const addLostItem = async (req, res) => {
       documentNumber,
       surname,
       initials,
-      firstNames,
+      firstNames: formattedFirstNames,
       dateOfBirth,
       image: imageUrl,
     })
