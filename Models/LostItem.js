@@ -56,10 +56,12 @@ const lostItemSchema = mongoose.Schema(
     },
     idNumber: String,
     passportNumber: String,
+    documentNumber: String,
 
     surname: String,
     initials: String,
     firstNames: [String],
+    dateOfBirth: Date,
     claimRequestedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

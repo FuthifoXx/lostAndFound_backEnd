@@ -107,9 +107,11 @@ export const addLostItem = async (req, res) => {
     identityType,
     idNumber,
     passportNumber,
+    documentNumber,
     surname,
     initials,
     firstNames,
+    dateOfBirth,
   } = req.body
 
   if (!name || !description || !location || !dateLost) {
@@ -130,15 +132,17 @@ export const addLostItem = async (req, res) => {
       name,
       description,
       location,
-      partner: partner || req.user.partner,
+      partner: req.user.partner,
       dateLost: new Date(dateLost),
 
       identityType,
       idNumber,
       passportNumber,
+      documentNumber,
       surname,
       initials,
       firstNames,
+      dateOfBirth,
       image: imageUrl,
     })
 
@@ -159,6 +163,13 @@ export const addLostItem = async (req, res) => {
     if (newItem.identityType === 'PASSPORT' && newItem.passportNumber) {
       matchedUser = await User.findOne({
         passportNumber: newItem.passportNumber,
+      })
+    }
+
+    // Match OTHER document number
+    if (newItem.identityType === 'OTHER' && newItem.documentNumber) {
+      matchedUser = await User.findOne({
+        documentNumber: newItem.documentNumber,
       })
     }
 

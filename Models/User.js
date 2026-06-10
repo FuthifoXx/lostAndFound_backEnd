@@ -43,7 +43,7 @@ const userSchema = mongoose.Schema(
       type: [String],
       validate: [(arr) => arr.length <= 3, 'Max 3 names allowed'],
     },
-
+    documentNumber: String,
     dateOfBirth: {
       type: Date, // optional now
     },
@@ -78,8 +78,7 @@ const userSchema = mongoose.Schema(
     partner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Partner',
-
-    }
+    },
   },
   { timestamps: true },
 )
