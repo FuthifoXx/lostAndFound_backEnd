@@ -119,7 +119,7 @@ export const addLostItem = async (req, res) => {
   try {
     let imageUrl = null
 
-    // 🖼️ Upload image if exists
+    // Upload image if exists
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer)
       imageUrl = result.secure_url
