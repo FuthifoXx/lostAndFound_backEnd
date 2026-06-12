@@ -30,6 +30,7 @@ app.use('/api/lost-items', lostItemsRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/partners', partnerRoutes)
 app.use('/api/notifications', notifictionRoutes)
+app.use('/api/case-notes', caseNoteRoutes)
 
 // Test route
 app.get('/', (req, res) => {

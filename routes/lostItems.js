@@ -21,7 +21,7 @@ import {
   getRecoveryHistory,
   getRecoveryAnalytics,
   getBranchPerformance,
-  getItemTimeline
+  getItemTimeline,
 } from '../controllers/lostItemsController.js'
 
 import protect from '../middleware/authMiddleware.js'
