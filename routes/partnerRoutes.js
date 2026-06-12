@@ -3,6 +3,7 @@ import {
   createPartner,
   getPartners,
   assignUserToPartner,
+  verifyPartner,
 } from '../controllers/partnerController.js'
 
 import protect from '../middleware/authMiddleware.js'
@@ -13,6 +14,8 @@ const router = express.Router()
 router.post('/', protect, admin, createPartner)
 
 router.get('/', protect, admin, getPartners)
+
+router.put('/:id/verify', protect, admin, verifyPartner)
 
 router.put(
   '/:partnerId/assign-user/:userId',

@@ -17,6 +17,7 @@ export const registerUser = async (req, res) => {
       identityType,
       idNumber,
       passportNumber,
+      documentNumber,
       surname,
       initials,
       firstNames,
@@ -51,9 +52,16 @@ export const registerUser = async (req, res) => {
       gender = parsed.gender
     }
 
-    // ✅ Passport validation
+    //  Passport validation
     if (identityType === 'PASSPORT' && !passportNumber) {
       return res.status(400).json({ message: 'Passport number required' })
+    }
+
+    // Other validation
+    if (identityType === 'OTHER' && !documentNumber) {
+      return res.status(400).json({
+        message: 'Document number required',
+      })
     }
 
     const userExists = await User.findOne({ email })
@@ -64,13 +72,21 @@ export const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
+    const formattedFirstNames = Array.isArray(firstNames)
+      ? firstNames
+      : firstNames
+          ?.split(' ')
+          .map((name) => name.trim())
+          .filter(Boolean)
+
     const user = await User.create({
       identityType,
       idNumber,
       passportNumber,
+      documentNumber,
       surname,
       initials,
-      firstNames,
+      firstNames: formattedFirstNames,
       phone,
       email,
       password: hashedPassword,

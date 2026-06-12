@@ -54,3 +54,21 @@ export const assignUserToPartner = async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 }
+
+export const verifyPartner = async (req, res) => {
+  try {
+    const partner = await Partner.findById(req.params.id)
+
+    if (!partner) {
+      return res.status(404).json({ message: 'Partner not found' })
+    }
+
+    partner.isVerified = true
+
+    const updatedPartner = await partner.save()
+
+    res.json(updatedPartner)
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+}
