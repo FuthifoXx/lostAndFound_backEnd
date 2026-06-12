@@ -9,6 +9,7 @@ import lostItemsRoutes from './routes/lostItems.js'
 import authRoutes from './routes/authRoutes.js'
 import partnerRoutes from './routes/partnerRoutes.js'
 import notifictionRoutes from './routes/notificationRoutes.js'
+import caseNoteRoutes from './routes/caseNoteRoutes.js'
 //Connect to MongoDB
 connectDB()
 
