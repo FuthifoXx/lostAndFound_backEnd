@@ -10,6 +10,7 @@ import authRoutes from './routes/authRoutes.js'
 import partnerRoutes from './routes/partnerRoutes.js'
 import notifictionRoutes from './routes/notificationRoutes.js'
 import caseNoteRoutes from './routes/caseNoteRoutes.js'
+import receiptRoutes from './routes/receiptRoutes.js'
 //Connect to MongoDB
 connectDB()
 
@@ -32,6 +33,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/partners', partnerRoutes)
 app.use('/api/notifications', notifictionRoutes)
 app.use('/api/case-notes', caseNoteRoutes)
+app.use('/api/receipts', receiptRoutes)
 
 // Test route
 app.get('/', (req, res) => {
