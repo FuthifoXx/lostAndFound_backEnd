@@ -49,7 +49,10 @@ export const getReceiptByItem = async (req, res) => {
     })
       .populate('owner', 'surname firstNames email')
       .populate('partner', 'name branch')
-      .populate('item')
+      .populate(
+        'item',
+        'name description location dateLost image identityType initials surname firstNames',
+      )
 
     if (!receipt) {
       return res.status(404).json({
