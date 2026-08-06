@@ -47,8 +47,8 @@ export const getReceiptByItem = async (req, res) => {
     const receipt = await CollectionReceipt.findOne({
       item: req.params.itemId,
     })
-      .populate('owner')
-      .populate('partner')
+      .populate('owner', 'surname firstNames email')
+      .populate('partner', 'name branch')
       .populate('item')
 
     if (!receipt) {
