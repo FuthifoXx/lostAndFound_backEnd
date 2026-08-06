@@ -16,9 +16,9 @@ export const createReceipt = async (req, res) => {
       })
     }
 
-    if (item.status !== 'recovered') {
+    if (!['recovered', 'closed'].includes(item.status)) {
       return res.status(400).json({
-        message: 'Receipt can only be generated for recovered items',
+        message: 'Receipt can only be generated after recovery',
       })
     }
 
