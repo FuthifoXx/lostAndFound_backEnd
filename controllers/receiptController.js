@@ -22,7 +22,29 @@ export const createReceipt = async (req, res) => {
       })
     }
 
+    if (!item.matchedUser){
+      return res.status(400).json({
+        message: 'No owner has been matched to this item.',
+      })
+    }
+    
+    //Prevent duplicate receipts
+    const existingReceipt = await CollectionReceipt.findOne({
+      item: item._id,
+    })
+
+    if(existingReceipt) {
+      return res.status(200).json(existingReceipt)
+    }
+    
+    //Generate receipt number
+    const nextNumber = (await CollectionReceipt.countDocuments()) + 1
+
+    const receiptNumber = `LAF-${new Date().getFullYear()}-${String(nextNumber).padStart(6,'0')}`
+
+
     const receipt = await CollectionReceipt.create({
+      receiptNumber,
       item: item._id,
       owner: item.matchedUser._id,
       partner: item.partner._id,

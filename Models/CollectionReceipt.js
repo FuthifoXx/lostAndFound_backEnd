@@ -39,6 +39,11 @@ const collectionReceiptSchema = mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+
+    receiptNumber: {
+      type: String,
+      unique: true
+    }
   },
   { timestamps: true },
 )
