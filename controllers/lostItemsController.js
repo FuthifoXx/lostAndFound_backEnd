@@ -293,6 +293,10 @@ export const approveLostItem = async (req, res) => {
 
     item.approved = true
 
+    if(item.status === 'pending') {
+      item.status = 'approved'
+    }
+
     const updatedItem = await item.save()
     res.json(updatedItem)
   } catch (error) {
