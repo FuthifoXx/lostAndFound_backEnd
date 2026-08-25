@@ -69,7 +69,7 @@ export const getAllLostItems = async (req, res) => {
 //Get only items created by the us
 export const getMyLostItems = async (req, res) => {
   try {
-    const items = await LostItem.find({ user: req.user._id })
+    const items = await LostItem.find({ matchedUser: req.user._id })
       .populate('user', 'name email')
       .populate('partner', 'name branch address')
 
