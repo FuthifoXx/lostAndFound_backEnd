@@ -228,7 +228,7 @@ export const updateLostItem = async (req, res) => {
       req.user.role !== 'admin' &&
       req.user.role !== 'partner'
     ) {
-      return res.status(401).json({ message: 'Not authorized' })
+      return res.status(403).json({ message: 'Not authorized' })
     }
 
     const { name, description, location, dateLost, status } = req.body
