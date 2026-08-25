@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import LostItem from '../models/LostItem.js'
 import User from '../models/User.js'
 import Notification from '../models/Notification.js'
@@ -214,10 +215,10 @@ export const addLostItem = async (req, res) => {
 //Update a lost item
 export const updateLostItem = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid item ID' })
+    }
     const item = await LostItem.findById(req.params.id)
-    // if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    //   return res.status(400).json({ message: 'Invalid item ID' })
-    // }
     if (!item) {
       return res.status(404).json({ message: 'Item not found' })
     }
