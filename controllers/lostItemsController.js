@@ -232,13 +232,19 @@ export const updateLostItem = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' })
     }
 
-    const { name, description, location, dateLost, status } = req.body
+    //Status check
+    if(Object.prototype.hasOwnProperty.call(req.body, 'status')) {
+      return res.status(400).json({
+        message: 'Status must be changed through lifecycle endpoints'
+      })
+    }
+
+    const { name, description, location, dateLost } = req.body
 
     item.name = name || item.name
     item.description = description || item.description
     item.location = location || item.location
     item.dateLost = dateLost || item.dateLost
-    item.status = status || item.status
 
     const updatedItem = await item.save()
 
