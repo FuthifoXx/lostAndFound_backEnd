@@ -268,7 +268,7 @@ export const deleteLostItem = async (req, res) => {
       item.user.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'
     ) {
-      return res.status(401).json({ message: 'Not authorized' })
+      return res.status(403).json({ message: 'Not authorized' })
     }
 
     await item.deleteOne()
