@@ -233,9 +233,9 @@ export const updateLostItem = async (req, res) => {
     }
 
     //Status check
-    if(Object.prototype.hasOwnProperty.call(req.body, 'status')) {
+    if (Object.prototype.hasOwnProperty.call(req.body, 'status')) {
       return res.status(400).json({
-        message: 'Status must be changed through lifecycle endpoints'
+        message: 'Status must be changed through lifecycle endpoints',
       })
     }
 
@@ -257,8 +257,8 @@ export const updateLostItem = async (req, res) => {
 // Reject / Delete a lost item (Admin control) admin-aware + owner-aware
 export const deleteLostItem = async (req, res) => {
   try {
-    if(!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({message: 'Invalid item ID'})
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid item ID' })
     }
 
     const item = await LostItem.findById(req.params.id)
@@ -285,6 +285,9 @@ export const deleteLostItem = async (req, res) => {
 
 export const approveLostItem = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({message: 'Invalid item ID'})
+    }
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
@@ -293,7 +296,7 @@ export const approveLostItem = async (req, res) => {
 
     item.approved = true
 
-    if(item.status === 'pending') {
+    if (item.status === 'pending') {
       item.status = 'approved'
     }
 
