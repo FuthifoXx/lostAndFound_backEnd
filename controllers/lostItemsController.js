@@ -239,6 +239,7 @@ export const approveLostItem = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid item ID' })
     }
+
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
@@ -251,10 +252,29 @@ export const approveLostItem = async (req, res) => {
       item.status = 'approved'
     }
 
+    let matchedUser = null
+
+    // Matching only runs after approval
+    if (!item.matchedUser) {
+      matchedUser = await findMatchingUser(item)
+
+      if (matchedUser) {
+        item.matchedUser = matchedUser._id
+        item.status = 'matched'
+      }
+    }
+
     const updatedItem = await item.save()
-    res.json(updatedItem)
+
+    // Notify only when a new match was found
+    if (matchedUser) {
+      await notificationService.sendMatchNotification(matchedUser, updatedItem)
+    }
+
+    return res.json(updatedItem)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+    return res.status(500).json({ message: error.message })
   }
 }
 
