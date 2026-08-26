@@ -104,7 +104,6 @@ export const addLostItem = async (req, res) => {
     description,
     location,
     dateLost,
-    partner,
     identityType,
     idNumber,
     passportNumber,
@@ -156,55 +155,7 @@ export const addLostItem = async (req, res) => {
 
     console.log('NEW ITEM:', newItem)
 
-    // AUTO MATCHING
-
-    let matchedUser = null
-
-    // Match RSA ID
-    if (newItem.identityType === 'RSA_ID' && newItem.idNumber) {
-      matchedUser = await User.findOne({
-        idNumber: newItem.idNumber,
-      })
-    }
-
-    // Match Passport
-    if (newItem.identityType === 'PASSPORT' && newItem.passportNumber) {
-      matchedUser = await User.findOne({
-        passportNumber: newItem.passportNumber,
-      })
-    }
-
-    // Match OTHER document number
-    if (newItem.identityType === 'OTHER' && newItem.documentNumber) {
-      matchedUser = await User.findOne({
-        documentNumber: newItem.documentNumber,
-      })
-    }
-
-    console.log('MATCHED USER:', matchedUser)
-
-    if (matchedUser) {
-      newItem.matchedUser = matchedUser._id
-      newItem.status = 'matched'
-
-      const updatedItem = await newItem.save()
-
-      // CREATE NOTIFICATION
-      await Notification.create({
-        user: matchedUser._id,
-        item: updatedItem._id,
-        type: 'MATCH_FOUND',
-        message: `A possible match was found for your ${updatedItem.name}`,
-        channel: 'EMAIL',
-      })
-
-      // OPTIONAL EXTRA SERVICE
-      await notificationService.sendMatchNotification(matchedUser, updatedItem)
-
-      return res.status(201).json(updatedItem)
-    }
-
-    // NO MATCH CASE
+    // Item remains pending until admin approval
     return res.status(201).json(newItem)
   } catch (error) {
     console.error(error)
@@ -286,7 +237,7 @@ export const deleteLostItem = async (req, res) => {
 export const approveLostItem = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({message: 'Invalid item ID'})
+      return res.status(400).json({ message: 'Invalid item ID' })
     }
     const item = await LostItem.findById(req.params.id)
 
