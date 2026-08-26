@@ -21,11 +21,11 @@ export const findMatchingUser = async (item) => {
         passportNumber: item.passportNumber,
       })
     }
-    // 3. Name-based fallback
-    if (!matchedUser && item.identityType === 'OTHER') {
+    // 3.Other document match
+    if (!matchedUser && item.identityType === 'OTHER' && item.documentNumber) {
       matchedUser = await User.findOne({
-        surname: item.surname,
-        firstNames: { $in: item.firstNames },
+        identityType: 'OTHER',
+        documentNumber: item.documentNumber,
       })
     }
 
