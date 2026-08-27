@@ -390,12 +390,16 @@ export const requestClaim = async (req, res) => {
     item.claimStatus = 'pending'
 
     await item.populate('partner')
-    await item.populate('matchedUser')
+    await item.populate(
+      'matchedUser',
+      'identityType surname initials firstNames documentNumber phone email role',
+    )
+
     await item.save()
 
     await notificationService.sendClaimRequestNotification(item)
 
-    res.json({ message: 'Claim request sent', item })
+    return res.json({ message: 'Claim request sent', item })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
