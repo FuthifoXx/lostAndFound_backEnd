@@ -277,6 +277,7 @@ export const deleteLostItem = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' })
     }
 
+    await Notification.deleteMany({ item: item._id })
     await item.deleteOne()
 
     res.json({ message: 'Lost item removed' })

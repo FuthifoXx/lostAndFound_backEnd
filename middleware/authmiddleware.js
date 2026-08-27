@@ -30,9 +30,7 @@ const protect = async (req,res,next) => {
        if (!token) {
          return res.status(401).json({ message: 'Not authorized, no token' })
        }
-       console.log("TOKEN:", token);
-       console.log('AUTH HEADER:', req.headers.authorization)
-       
+     
 }
 
 export default protect
