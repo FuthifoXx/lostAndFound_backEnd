@@ -210,7 +210,7 @@ export const addLostItem = async (req, res) => {
     return res.status(201).json(newItem)
   } catch (error) {
     console.error(error)
-    res.status(500).json({ message: error.message })
+    return res.status(500).json({ message: error.message })
   }
 }
 
