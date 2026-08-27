@@ -119,6 +119,57 @@ export const addLostItem = async (req, res) => {
   }
 
   try {
+    const activeStatuses = ['pending', 'approved', 'matched', 'claimed']
+
+    let identifierFilter = null
+
+    if (identityType === 'RSA_ID') {
+      if (!idNumber) {
+        return res.status(400).json({ message: 'ID number required' })
+      }
+      identifierFilter = {
+        identityType: 'RSA_ID',
+        idNumber,
+      }
+    }
+
+    if (identityType === 'PASSPORT') {
+      if (!passportNumber) {
+        return res.status(400).json({ message: 'Passport number required' })
+      }
+
+      identifierFilter = {
+        identityType: 'PASSPORT',
+        passportNumber,
+      }
+    }
+
+    if (identityType === 'OTHER') {
+      if (!documentNumber) {
+        return res.status(400).json({ message: 'Document number required' })
+      }
+
+      identifierFilter = {
+        identityType: 'OTHER',
+        documentNumber,
+      }
+    }
+
+    if (identifierFilter) {
+      const existingItem = await LostItem.findOne({
+        ...identifierFilter,
+        status: { $in: activeStatuses },
+      }).select('_id status')
+
+      if (existingItem) {
+        return res.status(409).json({
+          message: 'An active case already exists for this document',
+          existingItemId: existingItem._id,
+          status: existingItem.status,
+        })
+      }
+    }
+
     let imageUrl = null
 
     // Upload image if exists
