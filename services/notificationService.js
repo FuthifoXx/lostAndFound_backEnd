@@ -35,26 +35,36 @@ const sendMatchNotification = async (user, item) => {
   }
 }
 
-//Claim Request Notification(to partner)
+// Claim Request Notification (to partner user)
 const sendClaimRequestNotification = async (item) => {
   const message = `A user requested to claim ${item.name}`
 
   try {
     const notification = await Notification.create({
-      user: item.partner,
+      user: item.user._id,
       item: item._id,
       type: 'CLAIM_REQUEST',
       message,
       channel: 'SMS',
     })
 
-    await sendSMS(item.partner.phone, message)
+    try {
+      await sendSMS(item.user.phone, message)
 
-    notification.status = 'sent'
-    notification.sentAt = new Date()
+      notification.status = 'sent'
+      notification.sentAt = new Date()
+    } catch (error) {
+      notification.status = 'failed'
+
+      console.error('SMS notification failed:', error.message)
+    }
+
     await notification.save()
+
+    return notification
   } catch (error) {
-    console.log(error)
+    console.error('Claim notification creation failed:', error.message)
+    return null
   }
 }
 

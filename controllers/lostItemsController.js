@@ -412,6 +412,7 @@ export const requestClaim = async (req, res) => {
     item.claimRequestedBy = req.user._id
     item.claimStatus = 'pending'
 
+    await item.populate('user', 'phone email role partner')
     await item.populate('partner')
     await item.populate(
       'matchedUser',
