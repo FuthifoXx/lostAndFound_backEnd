@@ -41,7 +41,7 @@ router.get('/pending', protect, admin, getPendingItems)
 router.get('/my-items', protect, getMyLostItems)
 
 // Get pending claims
-router.get('/pending-claims', protect, getPendingClaims)
+router.get('/pending-claims', protect, partnerOrAdmin, getPendingClaims)
 
 // Add item
 router.post('/', protect, partnerOrAdmin, upload.single('image'), addLostItem)

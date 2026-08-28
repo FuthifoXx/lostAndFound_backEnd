@@ -351,15 +351,32 @@ export const getPendingItems = async (req, res) => {
 
 export const getPendingClaims = async (req, res) => {
   try {
-    const items = await LostItem.find({
+    const filter = {
       claimStatus: 'pending',
-    })
-      .populate('matchedUser', 'email')
-      .populate('partner', 'name')
+    }
 
-    res.json(items)
+    // Partners may only view claims belonging to their own branch/partner
+    if (req.user.role === 'partner') {
+      if (!req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
+
+      filter.partner = req.user.partner
+    }
+
+    const items = await LostItem.find(filter)
+      .populate('matchedUser', 'email firstNames surname')
+      .populate('partner', 'name branch')
+
+    return res.json(items)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
 
@@ -368,10 +385,10 @@ export const requestClaim = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({
-        message: 'Invalid item ID'
+        message: 'Invalid item ID',
       })
     }
-    
+
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {

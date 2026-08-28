@@ -11,7 +11,7 @@ const partnerOrAdmin = async (req, res, next) => {
     if (req.user.role !== 'partner') {
       return res
         .status(403)
-        .json({ message: 'Only partners/admin can upload items' })
+        .json({ message: 'Partners or admin access only' })
     }
 
     // ❌ No partner linked
