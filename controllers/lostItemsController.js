@@ -366,6 +366,12 @@ export const getPendingClaims = async (req, res) => {
 //User Request Claim
 export const requestClaim = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid item ID'
+      })
+    }
+    
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
