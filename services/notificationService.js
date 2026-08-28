@@ -68,26 +68,43 @@ const sendClaimRequestNotification = async (item) => {
   }
 }
 
-//Claim Approved Notification
+// Claim Approved Notification
 const sendClaimApprovedNotification = async (item) => {
   const message = `Your claim for ${item.name} has been approved`
 
   try {
     const notification = await Notification.create({
-      user: item.matchedUser,
+      user: item.matchedUser._id,
       item: item._id,
       type: 'CLAIM_APPROVED',
       message,
       channel: 'WHATSAPP',
     })
 
-    await sendWhatsApp(item.matchedUser.phone, message)
+    try {
+      await sendWhatsApp(item.matchedUser.phone, message)
 
-    notification.status = 'sent'
-    notification.sentAt = new Date()
+      notification.status = 'sent'
+      notification.sentAt = new Date()
+    } catch (error) {
+      notification.status = 'failed'
+
+      console.error(
+        'Claim approval WhatsApp notification failed:',
+        error.message,
+      )
+    }
+
     await notification.save()
+
+    return notification
   } catch (error) {
-    console.log(error)
+    console.error(
+      'Claim approval notification creation failed:',
+      error.message,
+    )
+
+    return null
   }
 }
 

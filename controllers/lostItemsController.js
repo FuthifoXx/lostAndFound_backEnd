@@ -447,12 +447,26 @@ export const approveClaim = async (req, res) => {
       return res.status(403).json({ message: 'Not your item' })
     }
 
+    if (
+      item.claimStatus !== 'pending' ||
+      item.status !== 'matched' ||
+      !item.claimRequestedBy
+    ) {
+      return res.status(400).json({
+        message: 'Only pending claims can be approved',
+      })
+    }
+
     item.claimStatus = 'approved'
     item.status = 'claimed'
     item.claimedAt = new Date()
 
-    await item.populate('partner')
-    await item.populate('matchedUser')
+    await item.populate('partner', 'name branch address contact isVerified')
+    await item.populate(
+      'matchedUser',
+      'identityType surname initials firstName documentNumber phone email role',
+    )
+
     await item.save()
 
     await notificationService.sendClaimApprovedNotification(item)
@@ -463,16 +477,43 @@ export const approveClaim = async (req, res) => {
   }
 }
 
-//Partner Rejects Claim
+// Partner Rejects Claim
 export const rejectClaim = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid item ID',
+      })
+    }
+
     const item = await LostItem.findById(req.params.id)
 
+    if (!item) {
+      return res.status(404).json({
+        message: 'Item not found',
+      })
+    }
+
+    if (!item.partner || !req.user.partner) {
+      return res.status(403).json({
+        message: 'Partner not assigned properly',
+      })
+    }
+
+    if (item.partner.toString() !== req.user.partner.toString()) {
+      return res.status(403).json({
+        message: 'Not your item',
+      })
+    }
+
     if (
-      !item.partner ||
-      item.partner.toString() !== req.user.partner.toString()
+      item.claimStatus !== 'pending' ||
+      item.status !== 'matched' ||
+      !item.claimRequestedBy
     ) {
-      return res.status(404).json({ message: 'Not your item' })
+      return res.status(400).json({
+        message: 'Only pending claims can be rejected',
+      })
     }
 
     item.claimStatus = 'rejected'
@@ -480,9 +521,16 @@ export const rejectClaim = async (req, res) => {
 
     await item.save()
 
-    res.json({ message: 'Claim rejected', item })
+    return res.json({
+      message: 'Claim rejected',
+      item,
+    })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
 
