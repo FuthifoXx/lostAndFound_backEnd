@@ -405,6 +405,28 @@ export const requestClaim = async (req, res) => {
         .json({ message: 'Not authorized to claim this item' })
     }
 
+    //Item must still be in the matched stage
+    if (!item.approved || item.status !== 'matched') {
+      return res.status(400).json({
+        message: 'Item is not available for claim',
+      })
+    }
+
+    //Prevent duplicate pending requests
+    if (item.claimStatus === 'pending') {
+      return res.status(400).json({
+        message: 'Claim already requested',
+      })
+    }
+
+    //Only new or previously rejected claims can be requested
+    if (!['none', 'rejected'].includes(item.claimStatus)) {
+      return res.status(400).json({
+        message: 'Item is not available for claim',
+      })
+    }
+
+
     if (item.claimStatus === 'pending') {
       return res.status(400).json({ message: 'Claim already requested' })
     }
@@ -432,19 +454,32 @@ export const requestClaim = async (req, res) => {
 //Partner Approves Claim
 export const approveClaim = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid item ID',
+      })
+    }
+
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found' })
     }
 
-    // Only partner who owns item
-    if (!item.partner || !req.user.partner) {
-      return res.status(403).json({ message: 'Partner not assigned properly' })
-    }
+    //Admin may review any claim
+    //Partners may only review claims belonging to their partner.
+    if (req.user.role !== 'admin') {
+      if (!item.partner || !req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
 
-    if (item.partner.toString() !== req.user.partner.toString()) {
-      return res.status(403).json({ message: 'Not your item' })
+      if (item.partner.toString() !== req.user.partner.toString()) {
+        return res.status(403).json({
+          message: 'Not your item',
+        })
+      }
     }
 
     if (
@@ -494,16 +529,18 @@ export const rejectClaim = async (req, res) => {
       })
     }
 
-    if (!item.partner || !req.user.partner) {
-      return res.status(403).json({
-        message: 'Partner not assigned properly',
-      })
-    }
+    if (req.user.role !== 'admin') {
+      if(!item.partner || !req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
 
-    if (item.partner.toString() !== req.user.partner.toString()) {
-      return res.status(403).json({
-        message: 'Not your item',
-      })
+      if (item.partner.toString() !== req.user.partner.toString()) {
+        return res.status(403).json({
+          message: 'Not your item',
+        })
+      }
     }
 
     if (
