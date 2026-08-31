@@ -512,7 +512,7 @@ export const approveClaim = async (req, res) => {
   }
 }
 
-// Partner Rejects Claim
+// Partner/Admin Rejects Claim
 export const rejectClaim = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -529,8 +529,10 @@ export const rejectClaim = async (req, res) => {
       })
     }
 
+    // Admin may reject any pending claim.
+    // Partners may only reject claims belonging to their partner.
     if (req.user.role !== 'admin') {
-      if(!item.partner || !req.user.partner) {
+      if (!item.partner || !req.user.partner) {
         return res.status(403).json({
           message: 'Partner not assigned properly',
         })
@@ -556,7 +558,14 @@ export const rejectClaim = async (req, res) => {
     item.claimStatus = 'rejected'
     item.claimRequestedBy = null
 
+    await item.populate(
+      'matchedUser',
+      'identityType surname initials firstNames documentNumber phone email role',
+    )
+
     await item.save()
+
+    await notificationService.sendClaimRejectedNotification(item)
 
     return res.json({
       message: 'Claim rejected',
@@ -570,7 +579,6 @@ export const rejectClaim = async (req, res) => {
     })
   }
 }
-
 //Mark as recovered
 export const markAsRecovered = async (req, res) => {
   try {

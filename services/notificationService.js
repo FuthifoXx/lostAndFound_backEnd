@@ -99,8 +99,45 @@ const sendClaimApprovedNotification = async (item) => {
 
     return notification
   } catch (error) {
+    console.error('Claim approval notification creation failed:', error.message)
+
+    return null
+  }
+}
+
+// Claim Rejected Notification
+const sendClaimRejectedNotification = async (item) => {
+  const message = `Your claim for ${item.name} has been rejected`
+
+  try {
+    const notification = await Notification.create({
+      user: item.matchedUser._id,
+      item: item._id,
+      type: 'CLAIM_REJECTED',
+      message,
+      channel: 'WHATSAPP',
+    })
+
+    try {
+      await sendWhatsApp(item.matchedUser.phone, message)
+
+      notification.status = 'sent'
+      notification.sentAt = new Date()
+    } catch (error) {
+      notification.status = 'failed'
+
+      console.error(
+        'Claim rejection WhatsApp notification failed:',
+        error.message,
+      )
+    }
+
+    await notification.save()
+
+    return notification
+  } catch (error) {
     console.error(
-      'Claim approval notification creation failed:',
+      'Claim rejection notification creation failed:',
       error.message,
     )
 
@@ -112,4 +149,6 @@ export default {
   sendMatchNotification,
   sendClaimRequestNotification,
   sendClaimApprovedNotification,
+  sendClaimRejectedNotification,
 }
+
