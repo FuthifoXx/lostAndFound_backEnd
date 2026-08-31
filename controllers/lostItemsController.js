@@ -426,7 +426,6 @@ export const requestClaim = async (req, res) => {
       })
     }
 
-
     if (item.claimStatus === 'pending') {
       return res.status(400).json({ message: 'Claim already requested' })
     }
@@ -579,9 +578,16 @@ export const rejectClaim = async (req, res) => {
     })
   }
 }
-//Mark as recovered
+
+// Mark item as recovered
 export const markAsRecovered = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid item ID',
+      })
+    }
+
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
@@ -590,17 +596,45 @@ export const markAsRecovered = async (req, res) => {
       })
     }
 
+    // Admin may process any recovery.
+    // Partners may only process items belonging to their partner.
+    if (req.user.role !== 'admin') {
+      if (!item.partner || !req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
+
+      if (item.partner.toString() !== req.user.partner.toString()) {
+        return res.status(403).json({
+          message: 'Not your item',
+        })
+      }
+    }
+
+    if (
+      item.status !== 'claimed' ||
+      item.claimStatus !== 'approved' ||
+      !item.claimRequestedBy
+    ) {
+      return res.status(400).json({
+        message: 'Only claimed items can be marked as recovered',
+      })
+    }
+
     item.status = 'recovered'
     item.recoveredAt = new Date()
 
     await item.save()
 
-    res.json({
+    return res.json({
       message: 'Item marked as recovered',
       item,
     })
   } catch (error) {
-    res.status(500).json({
+    console.error(error)
+
+    return res.status(500).json({
       message: error.message,
     })
   }
@@ -721,18 +755,35 @@ export const getAdminDashboardData = async (req, res) => {
   }
 }
 
+//Get recovery history
 export const getRecoveryHistory = async (req, res) => {
   try {
-    const items = await LostItem.find({
+    const filter = {
       status: { $in: ['recovered', 'closed'] },
-    })
-      .sort({ updatedAt: -1 })
+    }
+
+    // Partners may see only their own branch/organization records.
+    // Admin may see the complete recovery history.
+    if (req.user.role !== 'admin') {
+      if (!req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
+
+      filter.partner = req.user.partner
+    }
+
+    const items = await LostItem.find(filter)
+      .sort({ recoveredAt: -1 })
       .populate('matchedUser', 'email')
       .populate('partner', 'name branch')
 
-    res.json(items)
+    return res.json(items)
   } catch (error) {
-    res.status(500).json({
+    console.error(error)
+
+    return res.status(500).json({
       message: error.message,
     })
   }
