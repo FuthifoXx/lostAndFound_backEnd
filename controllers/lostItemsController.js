@@ -83,15 +83,27 @@ export const getMyLostItems = async (req, res) => {
 //Get a single lost item
 export const getLostItemById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid item ID',
+      })
+    }
+
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' })
+      return res.status(404).json({
+        message: 'Item not found',
+      })
     }
 
-    res.json(item)
+    return res.json(item)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
 
@@ -289,36 +301,39 @@ export const deleteLostItem = async (req, res) => {
 export const approveLostItem = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid item ID' })
+      return res.status(400).json({
+        message: 'Invalid item ID',
+      })
     }
 
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' })
+      return res.status(404).json({
+        message: 'Item not found',
+      })
+    }
+
+    if (item.approved || item.status !== 'pending') {
+      return res.status(400).json({
+        message: 'Only pending items can be approved',
+      })
     }
 
     item.approved = true
+    item.approvedAt = new Date()
+    item.status = 'approved'
 
-    if (item.status === 'pending') {
-      item.status = 'approved'
-    }
+    const matchedUser = await findMatchingUser(item)
 
-    let matchedUser = null
-
-    // Matching only runs after approval
-    if (!item.matchedUser) {
-      matchedUser = await findMatchingUser(item)
-
-      if (matchedUser) {
-        item.matchedUser = matchedUser._id
-        item.status = 'matched'
-      }
+    if (matchedUser) {
+      item.matchedUser = matchedUser._id
+      item.matchedAt = new Date()
+      item.status = 'matched'
     }
 
     const updatedItem = await item.save()
 
-    // Notify only when a new match was found
     if (matchedUser) {
       await notificationService.sendMatchNotification(matchedUser, updatedItem)
     }
@@ -326,7 +341,10 @@ export const approveLostItem = async (req, res) => {
     return res.json(updatedItem)
   } catch (error) {
     console.error(error)
-    return res.status(500).json({ message: error.message })
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
 
@@ -392,46 +410,44 @@ export const requestClaim = async (req, res) => {
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' })
+      return res.status(404).json({
+        message: 'Item not found',
+      })
     }
 
-    // Only matched user can claim
+    // Only the matched user may request the claim.
     if (
       !item.matchedUser ||
       item.matchedUser.toString() !== req.user._id.toString()
     ) {
-      return res
-        .status(403)
-        .json({ message: 'Not authorized to claim this item' })
+      return res.status(403).json({
+        message: 'Not authorized to claim this item',
+      })
     }
 
-    //Item must still be in the matched stage
+    // The item must still be available at the matched stage.
     if (!item.approved || item.status !== 'matched') {
       return res.status(400).json({
         message: 'Item is not available for claim',
       })
     }
 
-    //Prevent duplicate pending requests
     if (item.claimStatus === 'pending') {
       return res.status(400).json({
         message: 'Claim already requested',
       })
     }
 
-    //Only new or previously rejected claims can be requested
+    // Only a new or previously rejected claim can be requested.
     if (!['none', 'rejected'].includes(item.claimStatus)) {
       return res.status(400).json({
         message: 'Item is not available for claim',
       })
     }
 
-    if (item.claimStatus === 'pending') {
-      return res.status(400).json({ message: 'Claim already requested' })
-    }
-
     item.claimRequestedBy = req.user._id
     item.claimStatus = 'pending'
+    item.claimRequestedAt = new Date()
 
     await item.populate('user', 'phone email role partner')
     await item.populate('partner')
@@ -444,9 +460,16 @@ export const requestClaim = async (req, res) => {
 
     await notificationService.sendClaimRequestNotification(item)
 
-    return res.json({ message: 'Claim request sent', item })
+    return res.json({
+      message: 'Claim request sent',
+      item,
+    })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
 
@@ -498,7 +521,7 @@ export const approveClaim = async (req, res) => {
     await item.populate('partner', 'name branch address contact isVerified')
     await item.populate(
       'matchedUser',
-      'identityType surname initials firstName documentNumber phone email role',
+      'identityType surname initials firstNames documentNumber phone email role',
     )
 
     await item.save()
@@ -642,6 +665,12 @@ export const markAsRecovered = async (req, res) => {
 
 export const closeCase = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid item ID',
+      })
+    }
+
     const item = await LostItem.findById(req.params.id)
 
     if (!item) {
@@ -650,17 +679,46 @@ export const closeCase = async (req, res) => {
       })
     }
 
+    // Admin may close any eligible case.
+    // Partners may close only cases belonging to their partner.
+    if (req.user.role !== 'admin') {
+      if (!item.partner || !req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
+
+      if (item.partner.toString() !== req.user.partner.toString()) {
+        return res.status(403).json({
+          message: 'Not your item',
+        })
+      }
+    }
+
+    // Closure is allowed only once, after recovery.
+    if (
+      item.status !== 'recovered' ||
+      item.claimStatus !== 'approved' ||
+      !item.recoveredAt
+    ) {
+      return res.status(400).json({
+        message: 'Only recovered items can be closed',
+      })
+    }
+
     item.status = 'closed'
     item.closedAt = new Date()
 
     await item.save()
 
-    res.json({
+    return res.json({
       message: 'Case closed',
       item,
     })
   } catch (error) {
-    res.status(500).json({
+    console.error(error)
+
+    return res.status(500).json({
       message: error.message,
     })
   }
@@ -915,12 +973,40 @@ export const getBranchPerformance = async (req, res) => {
 //Get Item Timeline
 export const getItemTimeline = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid item ID',
+      })
+    }
+
     const item = await LostItem.findById(req.params.id)
       .populate('matchedUser', 'email firstNames surname')
       .populate('partner', 'name branch address')
 
     if (!item) {
-      return res.status(404).json({ message: 'Item not found' })
+      return res.status(404).json({
+        message: 'Item not found',
+      })
+    }
+
+    // Admin may inspect every case.
+    // Partners may inspect only their own cases.
+    if (req.user.role !== 'admin') {
+      if (!item.partner || !req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
+
+      const itemPartnerId = item.partner._id
+        ? item.partner._id.toString()
+        : item.partner.toString()
+
+      if (itemPartnerId !== req.user.partner.toString()) {
+        return res.status(403).json({
+          message: 'Not your item',
+        })
+      }
     }
 
     const timeline = [
@@ -931,41 +1017,45 @@ export const getItemTimeline = async (req, res) => {
       },
       {
         label: 'Approved',
-        completed: item.approved,
-        date: item.approved ? item.updatedAt : null,
+        completed: Boolean(item.approvedAt),
+        date: item.approvedAt || null,
       },
       {
         label: 'Matched',
-        completed: Boolean(item.matchedUser),
-        date: item.matchedUser ? item.updatedAt : null,
+        completed: Boolean(item.matchedAt),
+        date: item.matchedAt || null,
       },
       {
         label: 'Claim Requested',
-        completed: item.claimStatus !== 'none',
-        date: item.claimStatus !== 'none' ? item.updatedAt : null,
+        completed: Boolean(item.claimRequestedAt),
+        date: item.claimRequestedAt || null,
       },
       {
         label: 'Claim Approved',
         completed: item.claimStatus === 'approved',
-        date: item.claimedAt,
+        date: item.claimedAt || null,
       },
       {
         label: 'Recovered',
-        completed: item.status === 'recovered' || item.status === 'closed',
-        date: item.recoveredAt,
+        completed: ['recovered', 'closed'].includes(item.status),
+        date: item.recoveredAt || null,
       },
       {
         label: 'Closed',
         completed: item.status === 'closed',
-        date: item.closedAt,
+        date: item.closedAt || null,
       },
     ]
 
-    res.json({
+    return res.json({
       item,
       timeline,
     })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
