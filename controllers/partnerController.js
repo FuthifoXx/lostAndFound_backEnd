@@ -3,10 +3,36 @@ import User from '../models/User.js'
 
 export const createPartner = async (req, res) => {
   try {
-    const partner = await Partner.create(req.body)
-    res.status(201).json(partner)
+    const { name, branch, address, contact } = req.body
+
+    if (!name || !branch || !address) {
+      return res.status(400).json({
+        message: 'Name, branch and address are required',
+      })
+    }
+
+    const existingPartner = await Partner.findOne({
+      name: name.trim(),
+      branch: branch.trim(),
+    })
+
+    if (existingPartner) {
+      return res.status(409).json({
+        message: 'This partner branch already exists',
+        partnerId: existingPartner._id,
+      })
+    }
+
+    const partner = await Partner.create({
+      name: name.trim(),
+      branch: branch.trim(),
+      address: address.trim(),
+      contact: contact?.trim(),
+    })
+
+    return res.status(201).json(partner)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    return res.status(500).json({ message: error.message })
   }
 }
 

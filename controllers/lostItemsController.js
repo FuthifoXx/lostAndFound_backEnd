@@ -237,13 +237,20 @@ export const updateLostItem = async (req, res) => {
       return res.status(404).json({ message: 'Item not found' })
     }
 
-    //Ownership check
-    if (
-      item.user.toString() !== req.user._id.toString() &&
-      req.user.role !== 'admin' &&
-      req.user.role !== 'partner'
-    ) {
-      return res.status(403).json({ message: 'Not authorized' })
+    // Admin may update any item.
+    // Partners may update only items belonging to their partner.
+    if (req.user.role !== 'admin') {
+      if (!item.partner || !req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
+
+      if (item.partner.toString() !== req.user.partner.toString()) {
+        return res.status(403).json({
+          message: 'Not your item',
+        })
+      }
     }
 
     //Status check
@@ -726,25 +733,35 @@ export const closeCase = async (req, res) => {
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const totalItems = await LostItem.countDocuments()
+    const filter = {}
 
-    const matchedItems = await LostItem.countDocuments({
-      status: 'matched',
-    })
+    // Admin sees global statistics.
+    // Partners see only statistics belonging to their partner.
+    if (req.user.role !== 'admin') {
+      if (!req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
 
-    const pendingClaims = await LostItem.countDocuments({
-      claimStatus: 'pending',
-    })
+      filter.partner = req.user.partner
+    }
 
-    const recoveredItems = await LostItem.countDocuments({
-      status: 'recovered',
-    })
+    const [
+      totalItems,
+      matchedItems,
+      pendingClaims,
+      recoveredItems,
+      closedCases,
+    ] = await Promise.all([
+      LostItem.countDocuments(filter),
+      LostItem.countDocuments({ ...filter, status: 'matched' }),
+      LostItem.countDocuments({ ...filter, claimStatus: 'pending' }),
+      LostItem.countDocuments({ ...filter, status: 'recovered' }),
+      LostItem.countDocuments({ ...filter, status: 'closed' }),
+    ])
 
-    const closedCases = await LostItem.countDocuments({
-      status: 'closed',
-    })
-
-    res.json({
+    return res.json({
       totalItems,
       matchedItems,
       pendingClaims,
@@ -752,7 +769,9 @@ export const getDashboardStats = async (req, res) => {
       closedCases,
     })
   } catch (error) {
-    res.status(500).json({
+    console.error(error)
+
+    return res.status(500).json({
       message: error.message,
     })
   }
@@ -850,28 +869,36 @@ export const getRecoveryHistory = async (req, res) => {
 //Get Recovery Analytics
 export const getRecoveryAnalytics = async (req, res) => {
   try {
-    const totalItems = await LostItem.countDocuments()
+    const filter = {}
 
-    const recoveredItems = await LostItem.countDocuments({
-      status: 'recovered',
-    })
+    if (req.user.role !== 'admin') {
+      if (!req.user.partner) {
+        return res.status(403).json({
+          message: 'Partner not assigned properly',
+        })
+      }
 
-    const closedCases = await LostItem.countDocuments({
-      status: 'closed',
-    })
+      filter.partner = req.user.partner
+    }
 
-    const matchedItems = await LostItem.countDocuments({
-      status: 'matched',
-    })
-
-    const claimedItems = await LostItem.countDocuments({
-      status: 'claimed',
-    })
+    const [
+      totalItems,
+      recoveredItems,
+      closedCases,
+      matchedItems,
+      claimedItems,
+    ] = await Promise.all([
+      LostItem.countDocuments(filter),
+      LostItem.countDocuments({ ...filter, status: 'recovered' }),
+      LostItem.countDocuments({ ...filter, status: 'closed' }),
+      LostItem.countDocuments({ ...filter, status: 'matched' }),
+      LostItem.countDocuments({ ...filter, status: 'claimed' }),
+    ])
 
     const recoveryRate =
       totalItems > 0 ? ((recoveredItems + closedCases) / totalItems) * 100 : 0
 
-    res.json({
+    return res.json({
       totalItems,
       recoveredItems,
       closedCases,
@@ -880,7 +907,9 @@ export const getRecoveryAnalytics = async (req, res) => {
       recoveryRate: recoveryRate.toFixed(1),
     })
   } catch (error) {
-    res.status(500).json({
+    console.error(error)
+
+    return res.status(500).json({
       message: error.message,
     })
   }

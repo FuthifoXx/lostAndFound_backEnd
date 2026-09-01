@@ -53,7 +53,7 @@ router.get('/partner/items', protect, partnerOrAdmin, getPartnerItems)
 router.get('/admin/dashboard', protect, admin, getAdminDashboardData)
 
 // Update item
-router.put('/:id', protect, updateLostItem)
+router.put('/:id', protect, partnerOrAdmin, updateLostItem)
 
 // Delete item
 router.delete('/:id', protect, deleteLostItem)
@@ -71,7 +71,7 @@ router.put('/:id/approve-claim', protect, partnerOrAdmin, approveClaim)
 router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
 
 //Dashboard statistices
-router.get('/stats/dashboard', protect, getDashboardStats)
+router.get('/stats/dashboard', protect, partnerOrAdmin, getDashboardStats)
 
 //Get Recovery History
 router.get('/recovery-history', protect, partnerOrAdmin, getRecoveryHistory)
