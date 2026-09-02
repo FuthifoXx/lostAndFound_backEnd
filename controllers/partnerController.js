@@ -89,6 +89,12 @@ export const assignUserToPartner = async (req, res) => {
       })
     }
 
+    if (user.role === 'admin') {
+      return res.status(400).json({
+        message: 'Admin users cannot be assigned to partners',
+      })
+    }
+
     user.role = 'partner'
     user.partner = partner._id
 
