@@ -14,6 +14,9 @@ export const createPartner = async (req, res) => {
     const existingPartner = await Partner.findOne({
       name: name.trim(),
       branch: branch.trim(),
+    }).collation({
+      locale: 'en',
+      strength: 2,
     })
 
     if (existingPartner) {
@@ -32,6 +35,14 @@ export const createPartner = async (req, res) => {
 
     return res.status(201).json(partner)
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: 'This partner branch already exists',
+      })
+    }
+
+    console.error(error);
+    
     return res.status(500).json({ message: error.message })
   }
 }
