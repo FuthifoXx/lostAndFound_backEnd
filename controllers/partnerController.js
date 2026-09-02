@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import Partner from '../models/Partner.js'
 import User from '../models/User.js'
 
@@ -41,8 +42,8 @@ export const createPartner = async (req, res) => {
       })
     }
 
-    console.error(error);
-    
+    console.error(error)
+
     return res.status(500).json({ message: error.message })
   }
 }
@@ -60,16 +61,32 @@ export const assignUserToPartner = async (req, res) => {
   try {
     const { partnerId, userId } = req.params
 
+    if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+      return res.status(400).json({
+        message: 'Invalid partner ID',
+      })
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        message: 'Invalid user ID',
+      })
+    }
+
     const partner = await Partner.findById(partnerId)
 
     if (!partner) {
-      return res.status(404).json({ message: 'Partner not found' })
+      return res.status(404).json({
+        message: 'Partner not found',
+      })
     }
 
     const user = await User.findById(userId)
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      return res.status(404).json({
+        message: 'User not found',
+      })
     }
 
     user.role = 'partner'
@@ -77,7 +94,7 @@ export const assignUserToPartner = async (req, res) => {
 
     await user.save()
 
-    res.json({
+    return res.json({
       message: 'User assigned to partner successfully',
       user: {
         _id: user._id,
@@ -88,24 +105,40 @@ export const assignUserToPartner = async (req, res) => {
       partner,
     })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }
 
 export const verifyPartner = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid partner ID',
+      })
+    }
+
     const partner = await Partner.findById(req.params.id)
 
     if (!partner) {
-      return res.status(404).json({ message: 'Partner not found' })
+      return res.status(404).json({
+        message: 'Partner not found',
+      })
     }
 
     partner.isVerified = true
 
     const updatedPartner = await partner.save()
 
-    res.json(updatedPartner)
+    return res.json(updatedPartner)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    console.error(error)
+
+    return res.status(500).json({
+      message: error.message,
+    })
   }
 }

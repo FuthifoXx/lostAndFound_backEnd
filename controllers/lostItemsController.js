@@ -358,7 +358,7 @@ export const approveLostItem = async (req, res) => {
 //Waiting for approval
 export const getPendingItems = async (req, res) => {
   try {
-    const items = await LostItem.find({ approved: false })
+    const items = await LostItem.find({ approved: false, status: 'pending' })
       .sort({ createdAt: -1 })
       .populate('user', 'name email')
       .populate('partner', 'name branch address')
@@ -367,10 +367,10 @@ export const getPendingItems = async (req, res) => {
       return res.json({ message: 'No pending items', items: [] })
     }
 
-    res.json(items)
+    return res.json(items)
   } catch (error) {
     console.log(error)
-    res.status(500).json({ message: error.message })
+    return res.status(500).json({ message: error.message })
   }
 }
 
@@ -796,7 +796,10 @@ export const getPartnerItems = async (req, res) => {
 export const getAdminDashboardData = async (req, res) => {
   try {
     const totalItems = await LostItem.countDocuments()
-    const pendingItems = await LostItem.countDocuments({ approved: false })
+    const pendingItems = await LostItem.countDocuments({
+      approved: false,
+      status: 'pending',
+    })
     const matchedItems = await LostItem.countDocuments({ status: 'matched' })
     const pendingClaims = await LostItem.countDocuments({
       claimStatus: 'pending',
@@ -805,7 +808,10 @@ export const getAdminDashboardData = async (req, res) => {
       status: 'recovered',
     })
 
-    const recentPendingItems = await LostItem.find({ approved: false })
+    const recentPendingItems = await LostItem.find({
+      approved: false,
+      status: 'pending',
+    })
       .sort({ createdAt: -1 })
       .limit(5)
       .populate('partner', 'name branch')
