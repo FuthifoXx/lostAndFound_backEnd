@@ -1,7 +1,27 @@
 import mongoose from 'mongoose'
+import Counter from '../models/Counter.js'
 import CollectionReceipt from '../models/CollectionReceipt.js'
 import LostItem from '../models/LostItem.js'
 import generateReceiptPDF from '../utils/generateReceiptPDF.js'
+
+const generateReceiptNumber = async () => {
+  const counter = await Counter.findByIdAndUpdate(
+    'collectionReceipt',
+    {
+      $inc: { sequence: 1 },
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    },
+  )
+
+  return `LAF-${new Date().getFullYear()}-${String(counter.sequence).padStart(
+    6,
+    '0',
+  )}`
+}
 
 const authorizeReceiptAccess = (partner, user, res) => {
   if (user.role === 'admin') {
@@ -80,10 +100,7 @@ export const createReceipt = async (req, res) => {
       })
     }
 
-    const nextNumber = (await CollectionReceipt.countDocuments()) + 1
-
-    const receiptNumber =
-      `LAF-${new Date().getFullYear()}-` + String(nextNumber).padStart(6, '0')
+    const receiptNumber = await generateReceiptNumber()
 
     const receipt = await CollectionReceipt.create({
       receiptNumber,
@@ -100,6 +117,17 @@ export const createReceipt = async (req, res) => {
 
     return res.status(201).json(receipt)
   } catch (error) {
+    // A simultaneous request may have created the item's receipt first.
+    if (error.code === 11000 && req.params.itemId) {
+      const existingReceipt = await CollectionReceipt.findOne({
+        item: req.params.itemId,
+      })
+
+      if (existingReceipt) {
+        return res.status(200).json(existingReceipt)
+      }
+    }
+
     console.error(error)
 
     return res.status(500).json({
