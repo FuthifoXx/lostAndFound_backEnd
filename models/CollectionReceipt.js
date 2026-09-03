@@ -42,15 +42,22 @@ const collectionReceiptSchema = mongoose.Schema(
 
     receiptNumber: {
       type: String,
-      unique: true
-    }
+      unique: true,
+    },
   },
   { timestamps: true },
+)
+
+collectionReceiptSchema.index(
+  { item: 1 },
+  {
+    unique: true,
+    name: 'unique_receipt_per_item',
+  },
 )
 
 const CollectionReceipt = mongoose.model(
   'CollectionReceipt',
   collectionReceiptSchema,
 )
-
 export default CollectionReceipt
