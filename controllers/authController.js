@@ -55,10 +55,15 @@ export const registerUser = async (req, res) => {
       if (!idNumber) {
         return res.status(400).json({ message: 'ID number required' })
       }
-
-      const parsed = parseSAID(idNumber)
-      dateOfBirth = parsed.dateOfBirth
-      gender = parsed.gender
+      try {
+        const parsed = parseSAID(idNumber)
+        dateOfBirth = parsed.dateOfBirth
+        gender = parsed.gender
+      } catch (error) {
+        return res.status(400).json({
+          message: 'Invalid SA ID number',
+        })
+      }
     }
 
     //  Passport validation
