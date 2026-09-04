@@ -49,6 +49,7 @@ export const registerUser = async (req, res) => {
 
     let dateOfBirth
     let gender
+    let identityFilter
 
     // ✅ ONLY parse if RSA ID
     if (identityType === 'RSA_ID') {
@@ -64,17 +65,45 @@ export const registerUser = async (req, res) => {
           message: 'Invalid SA ID number',
         })
       }
+      identityFilter = {
+        identityType: 'RSA_ID',
+        idNumber,
+      }
     }
 
     //  Passport validation
-    if (identityType === 'PASSPORT' && !passportNumber) {
-      return res.status(400).json({ message: 'Passport number required' })
+    if (identityType === 'PASSPORT') {
+      if (!passportNumber) {
+        return res.status(400).json({
+          message: 'Passport number required',
+        })
+      }
+
+      identityFilter = {
+        identityType: 'PASSPORT',
+        passportNumber,
+      }
     }
 
-    // Other validation
-    if (identityType === 'OTHER' && !documentNumber) {
-      return res.status(400).json({
-        message: 'Document number required',
+    //Other validation
+    if (identityType === 'OTHER') {
+      if (!documentNumber) {
+        return res.status(400).json({
+          message: 'Document number required',
+        })
+      }
+
+      identityFilter = {
+        identityType: 'OTHER',
+        documentNumber,
+      }
+    }
+
+    const identityExists = await User.exists(identityFilter)
+
+    if (identityExists) {
+      return res.status(409).json({
+        message: 'Identity document already registered',
       })
     }
 
@@ -114,8 +143,17 @@ export const registerUser = async (req, res) => {
       token: generateToken(user._id),
     })
   } catch (error) {
-    console.log(error)
-    res.status(500).json({ message: error.message })
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        message: 'User already exists',
+      })
+    }
+
+    console.error(error)
+
+    return res.status(500).json({
+      message: 'Server error',
+    })
   }
 }
 
