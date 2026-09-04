@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js' // Keep capitalized for now
@@ -210,6 +211,12 @@ export const getAllUsers = async (req, res) => {
 // ADMIN: GET SINGLE USER
 export const getUserById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid user ID',
+      })
+    }
+
     const user = await User.findById(req.params.id)
       .select('-password')
       .populate('partner', 'name branch address')
@@ -227,6 +234,12 @@ export const getUserById = async (req, res) => {
 // ADMIN: UPDATE USER
 export const updateUserById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid user ID',
+      })
+    }
+
     const user = await User.findById(req.params.id)
 
     if (!user) {
@@ -263,6 +276,12 @@ export const updateUserById = async (req, res) => {
 // ADMIN: DELETE USER
 export const deleteUserById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({
+        message: 'Invalid user ID',
+      })
+    }
+
     const user = await User.findById(req.params.id)
 
     if (!user) {
