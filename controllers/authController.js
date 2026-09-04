@@ -94,13 +94,11 @@ export const registerUser = async (req, res) => {
       gender,
       role: 'user',
     })
-
-    res.status(201).json({
+    return res.status(201).json({
       _id: user._id,
       email: user.email,
       token: generateToken(user._id),
     })
-    console.log(req.body)
   } catch (error) {
     console.log(error)
     res.status(500).json({ message: error.message })
@@ -154,14 +152,7 @@ export const updateMe = async (req, res) => {
       return res.status(404).json({ message: 'User not found' })
     }
 
-    const {
-      surname,
-      initials,
-      firstNames,
-      phone,
-      email,
-      password,
-    } = req.body
+    const { surname, initials, firstNames, phone, email, password } = req.body
 
     user.surname = surname || user.surname
     user.initials = initials || user.initials
@@ -242,15 +233,8 @@ export const updateUserById = async (req, res) => {
       return res.status(404).json({ message: 'User not found' })
     }
 
-    const {
-      surname,
-      initials,
-      firstNames,
-      phone,
-      email,
-      role,
-      partner,
-    } = req.body
+    const { surname, initials, firstNames, phone, email, role, partner } =
+      req.body
 
     user.surname = surname || user.surname
     user.initials = initials || user.initials
