@@ -39,6 +39,14 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
+    const allowedIdentityTypes = ['RSA_ID', 'PASSPORT', 'OTHER']
+
+    if (!allowedIdentityTypes.includes(identityType)) {
+      return res.status(400).json({
+        message: 'Invalid identity type',
+      })
+    }
+
     let dateOfBirth
     let gender
 
