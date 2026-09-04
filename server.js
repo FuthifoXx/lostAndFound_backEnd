@@ -11,20 +11,13 @@ import partnerRoutes from './routes/partnerRoutes.js'
 import notifictionRoutes from './routes/notificationRoutes.js'
 import caseNoteRoutes from './routes/caseNoteRoutes.js'
 import receiptRoutes from './routes/receiptRoutes.js'
-//Connect to MongoDB
-connectDB()
 
 const app = express()
 const PORT = process.env.PORT || 5000
 
 // Middleware
 app.use(cors())
-// app.use(
-//   cors({
-//     origin: 'http://localhost:5173',
-//     credentials: true,
-//   }),
-// )
+
 app.use(express.json())
 
 // Routes
@@ -41,6 +34,12 @@ app.get('/', (req, res) => {
 })
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
-})
+const startServer = async () => {
+  await connectDB()
+
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`)
+  })
+}
+
+startServer()
