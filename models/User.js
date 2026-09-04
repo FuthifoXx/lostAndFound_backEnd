@@ -6,6 +6,8 @@ const userSchema = mongoose.Schema(
       type: String,
       enum: ['RSA_ID', 'PASSPORT', 'OTHER'],
       required: true,
+      trim: true,
+      uppercase: true,
     },
 
     idNumber: {
@@ -13,6 +15,7 @@ const userSchema = mongoose.Schema(
       required: function () {
         return this.identityType === 'RSA_ID'
       },
+      trim: true,
       unique: true,
       sparse: true, // allows nulls for non-RSA users
     },
@@ -22,6 +25,8 @@ const userSchema = mongoose.Schema(
       required: function () {
         return this.identityType === 'PASSPORT'
       },
+      trim: true,
+      uppercase: true,
     },
 
     surname: {
@@ -42,9 +47,14 @@ const userSchema = mongoose.Schema(
       type: [String],
       validate: [(arr) => arr.length <= 3, 'Max 3 names allowed'],
     },
-    documentNumber: String,
+    documentNumber: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
+
     dateOfBirth: {
-      type: Date, // optional now
+      type: Date,
     },
 
     gender: {
@@ -61,6 +71,7 @@ const userSchema = mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      trim: true,
       lowercase: true,
     },
 

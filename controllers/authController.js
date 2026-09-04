@@ -14,7 +14,7 @@ const generateToken = (id) => {
 
 export const registerUser = async (req, res) => {
   try {
-    const {
+    let {
       identityType,
       idNumber,
       passportNumber,
@@ -26,6 +26,25 @@ export const registerUser = async (req, res) => {
       email,
       password,
     } = req.body
+
+    identityType =
+      typeof identityType === 'string'
+        ? identityType.trim().toUpperCase()
+        : identityType
+
+    idNumber = typeof idNumber === 'string' ? idNumber.trim() : idNumber
+
+    passportNumber =
+      typeof passportNumber === 'string'
+        ? passportNumber.trim().toUpperCase()
+        : passportNumber
+
+    documentNumber =
+      typeof documentNumber === 'string'
+        ? documentNumber.trim().toUpperCase()
+        : documentNumber
+
+    email = typeof email === 'string' ? email.trim().toLowerCase() : email
 
     if (
       !identityType ||
