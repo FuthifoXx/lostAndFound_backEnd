@@ -220,16 +220,40 @@ export const updateMe = async (req, res) => {
     const user = await User.findById(req.user._id)
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' })
+      return res.status(404).json({
+        message: 'User not found',
+      })
     }
 
     const { surname, initials, firstNames, phone, email, password } = req.body
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'email')) {
+      if (typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({
+          message: 'Email is required',
+        })
+      }
+
+      const normalizedEmail = email.trim().toLowerCase()
+
+      const emailExists = await User.exists({
+        _id: { $ne: user._id },
+        email: normalizedEmail,
+      })
+
+      if (emailExists) {
+        return res.status(409).json({
+          message: 'Email already registered',
+        })
+      }
+
+      user.email = normalizedEmail
+    }
 
     user.surname = surname || user.surname
     user.initials = initials || user.initials
     user.firstNames = firstNames || user.firstNames
     user.phone = phone || user.phone
-    user.email = email || user.email
 
     if (password) {
       const salt = await bcrypt.genSalt(10)
@@ -238,7 +262,7 @@ export const updateMe = async (req, res) => {
 
     const updatedUser = await user.save()
 
-    res.json({
+    return res.json({
       _id: updatedUser._id,
       surname: updatedUser.surname,
       firstNames: updatedUser.firstNames,
@@ -249,7 +273,24 @@ export const updateMe = async (req, res) => {
       token: generateToken(updatedUser._id),
     })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    // Protect against simultaneous requests passing the earlier lookup.
+    if (error?.code === 11000 && error?.keyPattern?.email) {
+      return res.status(409).json({
+        message: 'Email already registered',
+      })
+    }
+
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Invalid profile data',
+      })
+    }
+
+    console.error(error)
+
+    return res.status(500).json({
+      message: 'Server error',
+    })
   }
 }
 
