@@ -22,7 +22,6 @@ const userSchema = mongoose.Schema(
       required: function () {
         return this.identityType === 'PASSPORT'
       },
-      sparse: true,
     },
 
     surname: {
@@ -81,6 +80,30 @@ const userSchema = mongoose.Schema(
     },
   },
   { timestamps: true },
+)
+
+userSchema.index(
+  { passportNumber: 1 },
+  {
+    unique: true,
+    name: 'unique_passport_number',
+    partialFilterExpression: {
+      identityType: 'PASSPORT',
+      passportNumber: { $type: 'string', $gt: '' },
+    },
+  },
+)
+
+userSchema.index(
+  { documentNumber: 1 },
+  {
+    unique: true,
+    name: 'unique_other_document_number',
+    partialFilterExpression: {
+      identityType: 'OTHER',
+      documentNumber: { $type: 'string', $gt: '' },
+    },
+  },
 )
 
 const User = mongoose.model('User', userSchema)
