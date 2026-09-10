@@ -807,6 +807,9 @@ export const getAdminDashboardData = async (req, res) => {
     const recoveredItems = await LostItem.countDocuments({
       status: 'recovered',
     })
+    const closedCases = await LostItem.countDocuments({
+      status: 'closed',
+    })
 
     const recentPendingItems = await LostItem.find({
       approved: false,
@@ -829,6 +832,7 @@ export const getAdminDashboardData = async (req, res) => {
         matchedItems,
         pendingClaims,
         recoveredItems,
+        closedCases,
       },
       recentPendingItems,
       recentPendingClaims,
