@@ -360,6 +360,28 @@ export const updateUserById = async (req, res) => {
     const { surname, initials, firstNames, phone, email, role, partner } =
       req.body
 
+    if (Object.prototype.hasOwnProperty.call(req.body, 'email')) {
+      if (typeof email !== 'string' || !email.trim()) {
+        return res.status(400).json({
+          message: 'Email is required',
+        })
+      }
+
+      const normalizedEmail = email.trim().toLowerCase()
+
+      const emailExists = await User.exists({
+        _id: { $ne: user._id },
+        email: normalizedEmail,
+      })
+
+      if (emailExists) {
+        return res.status(409).json({
+          message: 'Email already registered',
+        })
+      }
+      user.email = normalizedEmail
+    }
+
     user.surname = surname || user.surname
     user.initials = initials || user.initials
     user.firstNames = firstNames || user.firstNames
@@ -370,7 +392,7 @@ export const updateUserById = async (req, res) => {
 
     const updatedUser = await user.save()
 
-    res.json({
+    return res.json({
       _id: updatedUser._id,
       surname: updatedUser.surname,
       firstNames: updatedUser.firstNames,
@@ -380,7 +402,19 @@ export const updateUserById = async (req, res) => {
       partner: updatedUser.partner,
     })
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    if (error?.code === 11000 && error?.keyPattern?.email) {
+      return res.status(409).json({ message: 'Email already registered' })
+    }
+    if (error?.name === 'ValidationError') {
+      return res.status(400).json({
+        message: 'Invalid user data',
+      })
+    }
+    console.error(error)
+
+    return res.status(500).json({
+      message: 'Server error',
+    })
   }
 }
 
