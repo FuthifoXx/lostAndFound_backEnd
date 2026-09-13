@@ -738,8 +738,9 @@ export const getDashboardStats = async (req, res) => {
     const filter = {}
 
     // Admin sees global statistics.
-    // Partners see only statistics belonging to their partner.
-    if (req.user.role !== 'admin') {
+    // Partners see statistics belonging to their partner.
+    // Users see only items matched to their identity.
+    if (req.user.role === 'partner') {
       if (!req.user.partner) {
         return res.status(403).json({
           message: 'Partner not assigned properly',
@@ -747,6 +748,8 @@ export const getDashboardStats = async (req, res) => {
       }
 
       filter.partner = req.user.partner
+    } else if (req.user.role === 'user') {
+      filter.matchedUser = req.user._id
     }
 
     const [

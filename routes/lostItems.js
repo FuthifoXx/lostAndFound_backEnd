@@ -71,7 +71,7 @@ router.put('/:id/approve-claim', protect, partnerOrAdmin, approveClaim)
 router.put('/:id/reject-claim', protect, partnerOrAdmin, rejectClaim)
 
 //Dashboard statistices
-router.get('/stats/dashboard', protect, partnerOrAdmin, getDashboardStats)
+router.get('/stats/dashboard', protect, getDashboardStats)
 
 //Get Recovery History
 router.get('/recovery-history', protect, partnerOrAdmin, getRecoveryHistory)
