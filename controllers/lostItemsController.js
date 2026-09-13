@@ -26,6 +26,7 @@ export const getAllLostItems = async (req, res) => {
           $or: [
             { name: { $regex: req.query.keyword, $options: 'i' } },
             { description: { $regex: req.query.keyword, $options: 'i' } },
+            { location: { $regex: req.query.keyword, $options: 'i' } },
           ],
         }
       : {}
