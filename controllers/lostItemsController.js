@@ -41,6 +41,7 @@ export const getAllLostItems = async (req, res) => {
     //Combine filters
     const filter = {
       approved: true,
+      status: 'approved',
       ...keyword,
       ...location,
       ...partner,
@@ -1097,4 +1098,3 @@ export const getItemTimeline = async (req, res) => {
       message: error.message,
     })
   }
-}
