@@ -18,12 +18,12 @@ const generateReceiptPDF = async (receipt) => {
   doc
     .fontSize(24)
     .font('Helvetica-Bold')
-    .text('LOST & FOUND', { align: 'center' })
+    .text('BACK 2 OWNER', { align: 'center' })
 
   doc
     .fontSize(11)
     .font('Helvetica')
-    .text('Management System', { align: 'center' })
+    .text('Lost Property Management', { align: 'center' })
 
   doc.moveDown()
 
@@ -246,7 +246,7 @@ const generateReceiptPDF = async (receipt) => {
       },
     )
 
-  doc.fontSize(8).text('Lost & Found Management System', 50, 770, {
+  doc.fontSize(8).text('Back 2 Owner', 50, 770, {
     width: 495,
     align: 'center',
   })
