@@ -32,16 +32,17 @@ export const registerUser = async (req, res) => {
         ? identityType.trim().toUpperCase()
         : identityType
 
-    idNumber = typeof idNumber === 'string' ? idNumber.trim() : idNumber
+    idNumber =
+      typeof idNumber === 'string' ? idNumber.trim() || undefined : idNumber
 
     passportNumber =
       typeof passportNumber === 'string'
-        ? passportNumber.trim().toUpperCase()
+        ? passportNumber.trim().toUpperCase() || undefined
         : passportNumber
 
     documentNumber =
       typeof documentNumber === 'string'
-        ? documentNumber.trim().toUpperCase()
+        ? documentNumber.trim().toUpperCase() || undefined
         : documentNumber
 
     email = typeof email === 'string' ? email.trim().toLowerCase() : email
@@ -141,11 +142,15 @@ export const registerUser = async (req, res) => {
           .map((name) => name.trim())
           .filter(Boolean)
 
+    const identityData = {
+      RSA_ID: { idNumber },
+      PASSPORT: { passportNumber },
+      OTHER: { documentNumber },
+    }[identityType]
+
     const user = await User.create({
       identityType,
-      idNumber,
-      passportNumber,
-      documentNumber,
+      ...identityData,
       surname,
       initials,
       firstNames: formattedFirstNames,
