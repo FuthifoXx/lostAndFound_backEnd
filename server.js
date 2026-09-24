@@ -1,6 +1,7 @@
 import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
+import multer from 'multer'
 
 dotenv.config()
 
@@ -55,6 +56,32 @@ app.get('/api/health', (req, res) => {
 // Test route
 app.get('/', (req, res) => {
   res.send('Lost & Found App API is running 🚀')
+})
+
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        message: 'Image must not exceed 5 MB',
+      })
+    }
+
+    return res.status(400).json({
+      message: error.message,
+    })
+  }
+
+  if (error.statusCode) {
+    return res.status(error.statusCode).json({
+      message: error.message,
+    })
+  }
+
+  console.error(error)
+
+  return res.status(500).json({
+    message: 'Server error',
+  })
 })
 
 // Start server

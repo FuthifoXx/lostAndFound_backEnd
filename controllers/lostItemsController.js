@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { fileTypeFromBuffer } from 'file-type'
 import LostItem from '../models/LostItem.js'
 import User from '../models/User.js'
 import Notification from '../models/Notification.js'
@@ -111,7 +112,6 @@ export const getLostItemById = async (req, res) => {
 
 // Create a lost item
 export const addLostItem = async (req, res) => {
-  console.log(req.file)
 
   const {
     name,
@@ -133,6 +133,21 @@ export const addLostItem = async (req, res) => {
   }
 
   try {
+        if (req.file) {
+          const detectedType = await fileTypeFromBuffer(req.file.buffer)
+          const allowedMimeTypes = new Set([
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+          ])
+
+          if (!detectedType || !allowedMimeTypes.has(detectedType.mime)) {
+            return res.status(400).json({
+              message:
+                'Uploaded file content is not a valid JPEG, PNG, or WebP image',
+            })
+          }
+        }
     const activeStatuses = ['pending', 'approved', 'matched', 'claimed']
 
     let identifierFilter = null
