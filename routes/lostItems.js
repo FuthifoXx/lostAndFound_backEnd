@@ -28,6 +28,7 @@ import protect from '../middleware/authMiddleware.js'
 import partnerOrAdmin from '../middleware/partnerMiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
 import upload from '../middleware/uploadMiddleware.js'
+import optionalAuth from '../middleware/optionalAuthMiddleware.js'
 
 const router = express.Router()
 
@@ -92,6 +93,6 @@ router.get('/analytics/branches', protect, admin, getBranchPerformance)
 router.get('/:id/timeline', protect, partnerOrAdmin, getItemTimeline)
 
 // Get single item
-router.get('/:id', getLostItemById)
+router.get('/:id', optionalAuth, getLostItemById)
 
 export default router

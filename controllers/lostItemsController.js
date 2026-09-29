@@ -13,6 +13,9 @@ import uploadToCloudinary from '../utils/uploadToCloudinary.js'
 import notificationService from '../services/notificationService.js'
 import { response } from 'express'
 
+const PUBLIC_LOST_ITEM_FIELDS =
+  'name description location image dateLost status partner createdAt'
+
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
   try {
@@ -52,14 +55,23 @@ export const getAllLostItems = async (req, res) => {
     const totalItems = await LostItem.countDocuments(filter)
 
     const items = await LostItem.find(filter)
+      .select(PUBLIC_LOST_ITEM_FIELDS)
       .sort({ createdAt: -1 })
-      .populate('user', 'name email')
-      .populate('partner', 'name branch address')
+      .populate('partner', 'name branch')
       .skip(skip)
       .limit(limit)
 
+    const publicItems = items.map((item) => {
+      const { image, ...publicItem } = item.toObject()
+
+      return {
+        ...publicItem,
+        hasProtectedImage: Boolean(image),
+      }
+    })
+
     res.json({
-      items,
+      items: publicItems,
       page,
       pages: Math.ceil(totalItems / limit),
       totalItems,
@@ -92,7 +104,10 @@ export const getLostItemById = async (req, res) => {
       })
     }
 
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).populate(
+      'partner',
+      'name branch',
+    )
 
     if (!item) {
       return res.status(404).json({
@@ -100,7 +115,48 @@ export const getLostItemById = async (req, res) => {
       })
     }
 
-    return res.json(item)
+    const isMatchedUser = Boolean(
+      req.user &&
+      item.matchedUser &&
+      item.matchedUser.toString() === req.user._id.toString(),
+    )
+
+    const isAdmin = req.user?.role === 'admin'
+
+    const isItemCreator = Boolean(
+      req.user && item.user.toString() === req.user._id.toString(),
+    )
+
+    const isPubliclyAvailable =
+      item.approved === true && item.status === 'approved'
+
+    const canViewPrivateState = isMatchedUser || isAdmin || isItemCreator
+
+    if (!isPubliclyAvailable && !canViewPrivateState) {
+      return res.status(404).json({
+        message: 'Item not found',
+      })
+    }
+
+    const responseItem = {
+      _id: item._id,
+      name: item.name,
+      description: item.description,
+      location: item.location,
+      partner: item.partner,
+      image: canViewPrivateState ? item.image : undefined,
+      hasProtectedImage: Boolean(item.image),
+      dateLost: item.dateLost,
+      status: item.status,
+      createdAt: item.createdAt,
+      isMatchedUser,
+    }
+
+    if (canViewPrivateState) {
+      responseItem.claimStatus = item.claimStatus
+    }
+
+    return res.json(responseItem)
   } catch (error) {
     console.error(error)
 
@@ -112,7 +168,6 @@ export const getLostItemById = async (req, res) => {
 
 // Create a lost item
 export const addLostItem = async (req, res) => {
-
   const {
     name,
     description,
@@ -133,21 +188,21 @@ export const addLostItem = async (req, res) => {
   }
 
   try {
-        if (req.file) {
-          const detectedType = await fileTypeFromBuffer(req.file.buffer)
-          const allowedMimeTypes = new Set([
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-          ])
+    if (req.file) {
+      const detectedType = await fileTypeFromBuffer(req.file.buffer)
+      const allowedMimeTypes = new Set([
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+      ])
 
-          if (!detectedType || !allowedMimeTypes.has(detectedType.mime)) {
-            return res.status(400).json({
-              message:
-                'Uploaded file content is not a valid JPEG, PNG, or WebP image',
-            })
-          }
-        }
+      if (!detectedType || !allowedMimeTypes.has(detectedType.mime)) {
+        return res.status(400).json({
+          message:
+            'Uploaded file content is not a valid JPEG, PNG, or WebP image',
+        })
+      }
+    }
     const activeStatuses = ['pending', 'approved', 'matched', 'claimed']
 
     let identifierFilter = null
