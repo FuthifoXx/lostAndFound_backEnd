@@ -16,6 +16,30 @@ import { response } from 'express'
 const PUBLIC_LOST_ITEM_FIELDS =
   'name description location image dateLost status partner createdAt'
 
+const getCloudinaryPublicIdFromUrl = (imageUrl) => {
+  if (!imageUrl) return null
+
+  try {
+    const url = new URL(imageUrl)
+
+    if (url.hostname !== 'res.cloudinary.com') {
+      return null
+    }
+
+    const uploadPath = url.pathname.split('/upload/')[1]
+
+    if (!uploadPath) {
+      return null
+    }
+
+    const publicIdWithExtension = uploadPath.replace(/^v\d+\//, '')
+
+    return decodeURIComponent(publicIdWithExtension.replace(/\.[^/.]+$/, ''))
+  } catch {
+    return null
+  }
+}
+
 // Get all lost items
 export const getAllLostItems = async (req, res) => {
   try {
@@ -255,11 +279,13 @@ export const addLostItem = async (req, res) => {
     }
 
     let imageUrl = null
+    let imagePublicId = null
 
     // Upload image if exists
     if (req.file) {
       const result = await uploadToCloudinary(req.file.buffer)
       imageUrl = result.secure_url
+      imagePublicId = result.public_id
     }
 
     const formattedFirstNames = Array.isArray(firstNames)
@@ -286,12 +312,14 @@ export const addLostItem = async (req, res) => {
       firstNames: formattedFirstNames,
       dateOfBirth,
       image: imageUrl,
+      imagePublicId,
     })
 
-    console.log('NEW ITEM:', newItem)
-
     // Item remains pending until admin approval
-    return res.status(201).json(newItem)
+    const responseItem = newItem.toObject()
+    delete responseItem.imagePublicId
+
+    return res.status(201).json(responseItem)
   } catch (error) {
     console.error(error)
     return res.status(500).json({ message: error.message })
@@ -354,7 +382,7 @@ export const deleteLostItem = async (req, res) => {
       return res.status(400).json({ message: 'Invalid item ID' })
     }
 
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).select('+imagePublicId')
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found' })
@@ -368,10 +396,38 @@ export const deleteLostItem = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' })
     }
 
+    const imagePublicId =
+      item.imagePublicId || getCloudinaryPublicIdFromUrl(item.image)
+
+    if (imagePublicId) {
+      try {
+        const result = await cloudinary.uploader.destroy(imagePublicId, {
+          resource_type: 'image',
+          invalidate: true,
+        })
+
+        if (!['ok', 'not found'].includes(result.result)) {
+          return res.status(502).json({
+            message: 'Image cleanup failed; item was not deleted',
+          })
+        }
+      } catch (cloudinaryError) {
+        console.error('Cloudinary image cleanup failed', {
+          itemId: item._id.toString(),
+          message: cloudinaryError.message,
+        })
+
+        return res.status(502).json({
+          message: 'Image cleanup failed; item was not deleted',
+        })
+      }
+    }
+
     await Notification.deleteMany({ item: item._id })
     await item.deleteOne()
 
-    res.json({ message: 'Lost item removed' })
+    return res.json({ message: 'Lost item removed' })
+    
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
