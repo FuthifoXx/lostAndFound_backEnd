@@ -9,9 +9,13 @@ import sendEmail from '../utils/sendEmail.js'
 import sendSMS from '../utils/sendSMS.js'
 import sendWhatsApp from '../utils/sendWhatsApp.js'
 import cloudinary from '../config/cloudinary.js'
-import uploadToCloudinary from '../utils/uploadToCloudinary.js'
 import notificationService from '../services/notificationService.js'
 import { response } from 'express'
+import {
+  createPrivateDocumentUrl,
+  deletePrivateDocument,
+  uploadPrivateDocument,
+} from '../utils/s3Storage.js'
 
 const PUBLIC_LOST_ITEM_FIELDS =
   'name description location image dateLost status partner createdAt'
@@ -79,18 +83,18 @@ export const getAllLostItems = async (req, res) => {
     const totalItems = await LostItem.countDocuments(filter)
 
     const items = await LostItem.find(filter)
-      .select(PUBLIC_LOST_ITEM_FIELDS)
+      .select(`${PUBLIC_LOST_ITEM_FIELDS} +imageKey`)
       .sort({ createdAt: -1 })
       .populate('partner', 'name branch')
       .skip(skip)
       .limit(limit)
 
     const publicItems = items.map((item) => {
-      const { image, ...publicItem } = item.toObject()
+      const { image, imageKey, ...publicItem } = item.toObject()
 
       return {
         ...publicItem,
-        hasProtectedImage: Boolean(image),
+        hasProtectedImage: Boolean(image || imageKey),
       }
     })
 
@@ -106,16 +110,32 @@ export const getAllLostItems = async (req, res) => {
   }
 }
 
-//Get only items created by the us
+// Get only items matched to the signed-in user
 export const getMyLostItems = async (req, res) => {
   try {
     const items = await LostItem.find({ matchedUser: req.user._id })
+      .select('+imageKey')
       .populate('user', 'name email')
       .populate('partner', 'name branch address')
 
-    res.json(items)
+    const responseItems = await Promise.all(
+      items.map(async (item) => {
+        const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+        responseItem.image = imageKey
+          ? await createPrivateDocumentUrl(imageKey)
+          : item.image
+
+        responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+        return responseItem
+      }),
+    )
+
+    res.set('Cache-Control', 'private, no-store')
+    return res.json(responseItems)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    return res.status(500).json({ message: error.message })
   }
 }
 
@@ -128,10 +148,9 @@ export const getLostItemById = async (req, res) => {
       })
     }
 
-    const item = await LostItem.findById(req.params.id).populate(
-      'partner',
-      'name branch',
-    )
+    const item = await LostItem.findById(req.params.id)
+      .select('+imageKey')
+      .populate('partner', 'name branch')
 
     if (!item) {
       return res.status(404).json({
@@ -162,14 +181,22 @@ export const getLostItemById = async (req, res) => {
       })
     }
 
+    let protectedImageUrl
+
+    if (canViewPrivateState) {
+      protectedImageUrl = item.imageKey
+        ? await createPrivateDocumentUrl(item.imageKey)
+        : item.image
+    }
+
     const responseItem = {
       _id: item._id,
       name: item.name,
       description: item.description,
       location: item.location,
       partner: item.partner,
-      image: canViewPrivateState ? item.image : undefined,
-      hasProtectedImage: Boolean(item.image),
+      image: protectedImageUrl,
+      hasProtectedImage: Boolean(item.image || item.imageKey),
       dateLost: item.dateLost,
       status: item.status,
       createdAt: item.createdAt,
@@ -179,7 +206,7 @@ export const getLostItemById = async (req, res) => {
     if (canViewPrivateState) {
       responseItem.claimStatus = item.claimStatus
     }
-
+    res.set('Cache-Control', 'private, no-store')
     return res.json(responseItem)
   } catch (error) {
     console.error(error)
@@ -211,9 +238,14 @@ export const addLostItem = async (req, res) => {
     return res.status(400).json({ message: 'All fields are required' })
   }
 
+  let imageKey = null
+  let itemSaved = false
+
   try {
+    let detectedType
+
     if (req.file) {
-      const detectedType = await fileTypeFromBuffer(req.file.buffer)
+      detectedType = await fileTypeFromBuffer(req.file.buffer)
       const allowedMimeTypes = new Set([
         'image/jpeg',
         'image/png',
@@ -278,14 +310,13 @@ export const addLostItem = async (req, res) => {
       }
     }
 
-    let imageUrl = null
-    let imagePublicId = null
-
-    // Upload image if exists
+    // Upload verified image to private S3 storage
     if (req.file) {
-      const result = await uploadToCloudinary(req.file.buffer)
-      imageUrl = result.secure_url
-      imagePublicId = result.public_id
+      imageKey = await uploadPrivateDocument({
+        buffer: req.file.buffer,
+        contentType: detectedType.mime,
+        extension: detectedType.ext,
+      })
     }
 
     const formattedFirstNames = Array.isArray(firstNames)
@@ -311,16 +342,30 @@ export const addLostItem = async (req, res) => {
       initials,
       firstNames: formattedFirstNames,
       dateOfBirth,
-      image: imageUrl,
-      imagePublicId,
+      imageKey,
     })
+
+    itemSaved = true
 
     // Item remains pending until admin approval
     const responseItem = newItem.toObject()
     delete responseItem.imagePublicId
+    delete responseItem.imageKey
+
+    responseItem.hasProtectedImage = Boolean(imageKey)
 
     return res.status(201).json(responseItem)
   } catch (error) {
+    if (imageKey && !itemSaved) {
+      try {
+        await deletePrivateDocument(imageKey)
+      } catch (cleanupError) {
+        console.error('S3 upload rollback failed', {
+          message: cleanupError.message,
+        })
+      }
+    }
+
     console.error(error)
     return res.status(500).json({ message: error.message })
   }
@@ -332,7 +377,7 @@ export const updateLostItem = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid item ID' })
     }
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).select('+imageKey')
     if (!item) {
       return res.status(404).json({ message: 'Item not found' })
     }
@@ -369,7 +414,16 @@ export const updateLostItem = async (req, res) => {
 
     const updatedItem = await item.save()
 
-    res.json(updatedItem)
+    const { imageKey, imagePublicId, ...responseItem } = updatedItem.toObject()
+
+    responseItem.image = imageKey
+      ? await createPrivateDocumentUrl(imageKey)
+      : updatedItem.image
+
+    responseItem.hasProtectedImage = Boolean(updatedItem.image || imageKey)
+
+    res.set('Cache-Control', 'private, no-store')
+    return res.json(responseItem)
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -382,7 +436,9 @@ export const deleteLostItem = async (req, res) => {
       return res.status(400).json({ message: 'Invalid item ID' })
     }
 
-    const item = await LostItem.findById(req.params.id).select('+imagePublicId')
+    const item = await LostItem.findById(req.params.id).select(
+      '+imagePublicId +imageKey',
+    )
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found' })
@@ -394,6 +450,21 @@ export const deleteLostItem = async (req, res) => {
       req.user.role !== 'admin'
     ) {
       return res.status(403).json({ message: 'Not authorized' })
+    }
+
+    if (item.imageKey) {
+      try {
+        await deletePrivateDocument(item.imageKey)
+      } catch (storageError) {
+        console.error('S3 document cleanup failed', {
+          itemId: item._id.toString(),
+          message: storageError.message,
+        })
+
+        return res.status(502).json({
+          message: 'Image cleanup failed; item was not deleted',
+        })
+      }
     }
 
     const imagePublicId =
@@ -427,7 +498,6 @@ export const deleteLostItem = async (req, res) => {
     await item.deleteOne()
 
     return res.json({ message: 'Lost item removed' })
-    
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -441,7 +511,7 @@ export const approveLostItem = async (req, res) => {
       })
     }
 
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).select('+imageKey')
 
     if (!item) {
       return res.status(404).json({
@@ -473,7 +543,16 @@ export const approveLostItem = async (req, res) => {
       await notificationService.sendMatchNotification(matchedUser, updatedItem)
     }
 
-    return res.json(updatedItem)
+    const { imageKey, imagePublicId, ...responseItem } = updatedItem.toObject()
+
+    responseItem.image = imageKey
+      ? await createPrivateDocumentUrl(imageKey)
+      : updatedItem.image
+
+    responseItem.hasProtectedImage = Boolean(updatedItem.image || imageKey)
+
+    res.set('Cache-Control', 'private, no-store')
+    return res.json(responseItem)
   } catch (error) {
     console.error(error)
 
@@ -486,18 +565,38 @@ export const approveLostItem = async (req, res) => {
 //Waiting for approval
 export const getPendingItems = async (req, res) => {
   try {
-    const items = await LostItem.find({ approved: false, status: 'pending' })
+    const items = await LostItem.find({
+      approved: false,
+      status: 'pending',
+    })
+      .select('+imageKey')
       .sort({ createdAt: -1 })
       .populate('user', 'name email')
       .populate('partner', 'name branch address')
+
+    res.set('Cache-Control', 'private, no-store')
 
     if (items.length === 0) {
       return res.json({ message: 'No pending items', items: [] })
     }
 
-    return res.json(items)
+    const responseItems = await Promise.all(
+      items.map(async (item) => {
+        const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+        responseItem.image = imageKey
+          ? await createPrivateDocumentUrl(imageKey)
+          : item.image
+
+        responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+        return responseItem
+      }),
+    )
+
+    return res.json(responseItems)
   } catch (error) {
-    console.log(error)
+    console.error(error)
     return res.status(500).json({ message: error.message })
   }
 }
@@ -520,10 +619,26 @@ export const getPendingClaims = async (req, res) => {
     }
 
     const items = await LostItem.find(filter)
+      .select('+imageKey')
       .populate('matchedUser', 'email firstNames surname')
       .populate('partner', 'name branch')
 
-    return res.json(items)
+    const responseItems = await Promise.all(
+      items.map(async (item) => {
+        const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+        responseItem.image = imageKey
+          ? await createPrivateDocumentUrl(imageKey)
+          : item.image
+
+        responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+        return responseItem
+      }),
+    )
+
+    res.set('Cache-Control', 'private, no-store')
+    return res.json(responseItems)
   } catch (error) {
     console.error(error)
 
@@ -595,9 +710,17 @@ export const requestClaim = async (req, res) => {
 
     await notificationService.sendClaimRequestNotification(item)
 
+    res.set('Cache-Control', 'private, no-store')
+
     return res.json({
       message: 'Claim request sent',
-      item,
+      item: {
+        _id: item._id,
+        status: item.status,
+        claimStatus: item.claimStatus,
+        claimRequestedAt: item.claimRequestedAt,
+        isMatchedUser: true,
+      },
     })
   } catch (error) {
     console.error(error)
@@ -617,7 +740,7 @@ export const approveClaim = async (req, res) => {
       })
     }
 
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).select('+imageKey')
 
     if (!item) {
       return res.status(404).json({ message: 'Item not found' })
@@ -663,7 +786,20 @@ export const approveClaim = async (req, res) => {
 
     await notificationService.sendClaimApprovedNotification(item)
 
-    res.json({ message: 'Item claimed successfully', item })
+    const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+    responseItem.image = imageKey
+      ? await createPrivateDocumentUrl(imageKey)
+      : item.image
+
+    responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+    res.set('Cache-Control', 'private, no-store')
+
+    return res.json({
+      message: 'Item claimed successfully',
+      item: responseItem,
+    })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -678,7 +814,7 @@ export const rejectClaim = async (req, res) => {
       })
     }
 
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).select('+imageKey')
 
     if (!item) {
       return res.status(404).json({
@@ -724,9 +860,19 @@ export const rejectClaim = async (req, res) => {
 
     await notificationService.sendClaimRejectedNotification(item)
 
+    const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+    responseItem.image = imageKey
+      ? await createPrivateDocumentUrl(imageKey)
+      : item.image
+
+    responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+    res.set('Cache-Control', 'private, no-store')
+
     return res.json({
       message: 'Claim rejected',
-      item,
+      item: responseItem,
     })
   } catch (error) {
     console.error(error)
@@ -746,7 +892,7 @@ export const markAsRecovered = async (req, res) => {
       })
     }
 
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).select('+imageKey')
 
     if (!item) {
       return res.status(404).json({
@@ -785,9 +931,19 @@ export const markAsRecovered = async (req, res) => {
 
     await item.save()
 
+    const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+    responseItem.image = imageKey
+      ? await createPrivateDocumentUrl(imageKey)
+      : item.image
+
+    responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+    res.set('Cache-Control', 'private, no-store')
+
     return res.json({
       message: 'Item marked as recovered',
-      item,
+      item: responseItem,
     })
   } catch (error) {
     console.error(error)
@@ -806,7 +962,7 @@ export const closeCase = async (req, res) => {
       })
     }
 
-    const item = await LostItem.findById(req.params.id)
+    const item = await LostItem.findById(req.params.id).select('+imageKey')
 
     if (!item) {
       return res.status(404).json({
@@ -846,9 +1002,19 @@ export const closeCase = async (req, res) => {
 
     await item.save()
 
+    const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+    responseItem.image = imageKey
+      ? await createPrivateDocumentUrl(imageKey)
+      : item.image
+
+    responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+    res.set('Cache-Control', 'private, no-store')
+
     return res.json({
       message: 'Case closed',
-      item,
+      item: responseItem,
     })
   } catch (error) {
     console.error(error)
@@ -910,16 +1076,38 @@ export const getDashboardStats = async (req, res) => {
 
 export const getPartnerItems = async (req, res) => {
   try {
+    if (!req.user.partner) {
+      return res.status(403).json({
+        message: 'No partner assigned to this account',
+      })
+    }
+
     const items = await LostItem.find({
       partner: req.user.partner,
     })
+      .select('+imageKey')
       .sort({ createdAt: -1 })
       .populate('matchedUser', 'email firstNames surname')
       .populate('partner', 'name branch address')
 
-    res.json(items)
+    const responseItems = await Promise.all(
+      items.map(async (item) => {
+        const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+        responseItem.image = imageKey
+          ? await createPrivateDocumentUrl(imageKey)
+          : item.image
+
+        responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+        return responseItem
+      }),
+    )
+
+    res.set('Cache-Control', 'private, no-store')
+    return res.json(responseItems)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    return res.status(500).json({ message: error.message })
   }
 }
 
@@ -946,15 +1134,36 @@ export const getAdminDashboardData = async (req, res) => {
       approved: false,
       status: 'pending',
     })
+      .select('+imageKey')
       .sort({ createdAt: -1 })
       .limit(5)
       .populate('partner', 'name branch')
 
     const recentPendingClaims = await LostItem.find({ claimStatus: 'pending' })
+      .select('+imageKey')
       .sort({ updatedAt: -1 })
       .limit(5)
       .populate('matchedUser', 'email firstNames surname')
       .populate('partner', 'name branch')
+
+    const serializeItem = async (item) => {
+      const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+      responseItem.image = imageKey
+        ? await createPrivateDocumentUrl(imageKey)
+        : item.image
+
+      responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+      return responseItem
+    }
+
+    const [responsePendingItems, responsePendingClaims] = await Promise.all([
+      Promise.all(recentPendingItems.map(serializeItem)),
+      Promise.all(recentPendingClaims.map(serializeItem)),
+    ])
+
+    res.set('Cache-Control', 'private, no-store')
 
     res.json({
       stats: {
@@ -965,8 +1174,8 @@ export const getAdminDashboardData = async (req, res) => {
         recoveredItems,
         closedCases,
       },
-      recentPendingItems,
-      recentPendingClaims,
+      recentPendingItems: responsePendingItems,
+      recentPendingClaims: responsePendingClaims,
     })
   } catch (error) {
     res.status(500).json({ message: error.message })
@@ -993,11 +1202,27 @@ export const getRecoveryHistory = async (req, res) => {
     }
 
     const items = await LostItem.find(filter)
+      .select('+imageKey')
       .sort({ recoveredAt: -1 })
       .populate('matchedUser', 'email')
       .populate('partner', 'name branch')
 
-    return res.json(items)
+    const responseItems = await Promise.all(
+      items.map(async (item) => {
+        const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+        responseItem.image = imageKey
+          ? await createPrivateDocumentUrl(imageKey)
+          : item.image
+
+        responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+        return responseItem
+      }),
+    )
+
+    res.set('Cache-Control', 'private, no-store')
+    return res.json(responseItems)
   } catch (error) {
     console.error(error)
 
@@ -1150,6 +1375,7 @@ export const getItemTimeline = async (req, res) => {
     }
 
     const item = await LostItem.findById(req.params.id)
+      .select('+imageKey')
       .populate('matchedUser', 'email firstNames surname')
       .populate('partner', 'name branch address')
 
@@ -1217,8 +1443,18 @@ export const getItemTimeline = async (req, res) => {
       },
     ]
 
+    const { imageKey, imagePublicId, ...responseItem } = item.toObject()
+
+    responseItem.image = imageKey
+      ? await createPrivateDocumentUrl(imageKey)
+      : item.image
+
+    responseItem.hasProtectedImage = Boolean(item.image || imageKey)
+
+    res.set('Cache-Control', 'private, no-store')
+
     return res.json({
-      item,
+      item: responseItem,
       timeline,
     })
   } catch (error) {

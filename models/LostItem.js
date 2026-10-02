@@ -34,6 +34,10 @@ const lostItemSchema = mongoose.Schema(
       type: String,
       select: false,
     },
+    imageKey: {
+      type: String,
+      select: false,
+    },
     dateLost: {
       type: Date,
       required: true,
