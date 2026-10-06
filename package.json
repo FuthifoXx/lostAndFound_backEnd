@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "node --watch server.js"
   },
   "keywords": [],
   "author": "",
@@ -24,12 +24,9 @@
     "mongodb": "^7.1.0",
     "mongoose": "^9.1.5",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.4",
+    "nodemailer": "10.0.15",
     "pdfkit": "^0.19.1",
     "qrcode": "^1.5.4",
     "twilio": "^5.13.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.11"
   }
 }
