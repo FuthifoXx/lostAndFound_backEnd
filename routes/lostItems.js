@@ -53,8 +53,14 @@ router.get('/partner/items', protect, partnerOrAdmin, getPartnerItems)
 //Get Admin Dashboard Data
 router.get('/admin/dashboard', protect, admin, getAdminDashboardData)
 
-// Update item
-router.put('/:id', protect, partnerOrAdmin, updateLostItem)
+// Update item, optionally including a document image
+router.put(
+  '/:id',
+  protect,
+  partnerOrAdmin,
+  upload.single('image'),
+  updateLostItem,
+)
 
 // Delete item
 router.delete('/:id', protect, deleteLostItem)

@@ -373,11 +373,16 @@ export const addLostItem = async (req, res) => {
 
 //Update a lost item
 export const updateLostItem = async (req, res) => {
+  let uploadedImageKey = null
+  let itemSaved = false
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid item ID' })
     }
-    const item = await LostItem.findById(req.params.id).select('+imageKey')
+    const item = await LostItem.findById(req.params.id).select(
+      '+imageKey +imagePublicId',
+    )
+
     if (!item) {
       return res.status(404).json({ message: 'Item not found' })
     }
@@ -405,6 +410,31 @@ export const updateLostItem = async (req, res) => {
       })
     }
 
+    let detectedType
+
+    if (req.file) {
+      if (item.approved || item.status !== 'pending') {
+        return res.status(400).json({
+          message: 'Document images can only be changed before approval',
+        })
+      }
+
+      detectedType = await fileTypeFromBuffer(req.file.buffer)
+
+      const allowedMimeTypes = new Set([
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+      ])
+
+      if (!detectedType || !allowedMimeTypes.has(detectedType.mime)) {
+        return res.status(400).json({
+          message:
+            'Uploaded file content is not a valid JPEG, PNG, or WebP image',
+        })
+      }
+    }
+
     const { name, description, location, dateLost } = req.body
 
     item.name = name || item.name
@@ -412,7 +442,73 @@ export const updateLostItem = async (req, res) => {
     item.location = location || item.location
     item.dateLost = dateLost || item.dateLost
 
+    // Validate text changes before uploading a new file.
+    await item.validate()
+
+    const previousImageKey = item.imageKey
+    const previousImagePublicId =
+      item.imagePublicId || getCloudinaryPublicIdFromUrl(item.image)
+
+    if (req.file) {
+      // Save only if the stored item still matches what we loaded.
+      item.$where = {
+        approved: false,
+        status: 'pending',
+        updatedAt: item.updatedAt,
+        partner: item.partner,
+        imageKey: item.imageKey ?? null,
+        image: item.image ?? null,
+        imagePublicId: item.imagePublicId ?? null,
+      }
+
+      uploadedImageKey = await uploadPrivateDocument({
+        buffer: req.file.buffer,
+        contentType: detectedType.mime,
+        extension: detectedType.ext,
+      })
+
+      item.imageKey = uploadedImageKey
+      item.image = undefined
+      item.imagePublicId = undefined
+    }
+
     const updatedItem = await item.save()
+    itemSaved = true
+
+    // Remove the previous image only after the new reference is saved.
+    let imageCleanupWarning
+
+    if (uploadedImageKey) {
+      try {
+        if (previousImageKey) {
+          await deletePrivateDocument(previousImageKey)
+        }
+
+        if (previousImagePublicId) {
+          const result = await cloudinary.uploader.destroy(
+            previousImagePublicId,
+            {
+              resource_type: 'image',
+              invalidate: true,
+            },
+          )
+
+          if (!['ok', 'not found'].includes(result.result)) {
+            throw new Error('Unexpected Cloudinary cleanup result')
+          }
+        }
+      } catch (cleanupError) {
+        console.error('Previous image cleanup failed', {
+          itemId: item._id.toString(),
+          previousImageKey,
+          previousImagePublicId,
+          message: cleanupError.message,
+        })
+
+        imageCleanupWarning =
+          'The new image was saved, but the previous image could not be removed. Administrator cleanup is required.'
+      }
+    }
 
     const { imageKey, imagePublicId, ...responseItem } = updatedItem.toObject()
 
@@ -422,10 +518,62 @@ export const updateLostItem = async (req, res) => {
 
     responseItem.hasProtectedImage = Boolean(updatedItem.image || imageKey)
 
+    if (imageCleanupWarning) {
+      responseItem.warning = imageCleanupWarning
+    }
+
     res.set('Cache-Control', 'private, no-store')
     return res.json(responseItem)
   } catch (error) {
-    res.status(500).json({ message: error.message })
+    if (uploadedImageKey && !itemSaved) {
+      const saveDefinitelyRejected = [
+        'DocumentNotFoundError',
+        'VersionError',
+        'ValidationError',
+        'CastError',
+      ].includes(error.name)
+
+      if (saveDefinitelyRejected) {
+        try {
+          await deletePrivateDocument(uploadedImageKey)
+        } catch (cleanupError) {
+          console.error('Replacement image rollback failed', {
+            itemId: req.params.id,
+            imageKey: uploadedImageKey,
+            message: cleanupError.message,
+          })
+        }
+      } else {
+        // The database write outcome may be uncertain.
+        // Retain the image until its stored reference can be checked.
+        console.error('Replacement image requires reconciliation', {
+          itemId: req.params.id,
+          imageKey: uploadedImageKey,
+          message: error.message,
+        })
+      }
+    }
+
+    if (
+      !itemSaved &&
+      (error.name === 'DocumentNotFoundError' || error.name === 'VersionError')
+    ) {
+      return res.status(409).json({
+        message:
+          'This item changed or was deleted while you were updating it. Refresh the item before trying again.',
+      })
+    }
+
+    console.error('Lost item update failed', {
+      itemId: req.params.id,
+      message: error.message,
+    })
+
+    return res.status(500).json({
+      message: itemSaved
+        ? 'Item was saved, but the response could not be completed. Refresh the item before retrying.'
+        : 'Unable to update item',
+    })
   }
 }
 
