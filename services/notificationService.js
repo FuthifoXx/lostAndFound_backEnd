@@ -1,149 +1,94 @@
 import Notification from '../models/Notification.js'
 import sendSMS from '../utils/sendSMS.js'
 import sendWhatsApp from '../utils/sendWhatsApp.js'
+import sendEmail from '../utils/sendEmail.js'
 
-// Match Notification
-const sendMatchNotification = async (user, item) => {
-  const message = `We found a possible match for your ${item.name}`
+// Store the in-app record even when external delivery fails.
+const notify = async ({ recipient, item, type, message, legacyChannel, subject, text }) => {
+  const channel = process.env.EMAIL_NOTIFICATIONS_ENABLED === 'true'
+    ? 'EMAIL'
+    : legacyChannel
 
   try {
     const notification = await Notification.create({
-      user: user._id,
+      user: recipient._id,
       item: item._id,
-      type: 'MATCH_FOUND',
+      type,
       message,
-      channel: 'WHATSAPP',
+      channel,
     })
 
     try {
-      await sendWhatsApp(user.phone, message)
+      if (channel === 'EMAIL') {
+        if (!recipient.email?.trim()) throw new Error('Recipient email is missing')
+        await sendEmail(recipient.email.trim(), subject, text)
+      } else if (channel === 'SMS') {
+        await sendSMS(recipient.phone, message)
+      } else {
+        await sendWhatsApp(recipient.phone, message)
+      }
 
+      // "sent" means accepted by the provider, not confirmed inbox delivery.
       notification.status = 'sent'
       notification.sentAt = new Date()
     } catch (error) {
       notification.status = 'failed'
-
-      console.error('WhatsApp notification failed:', error.message)
+      console.error('Notification delivery failed', {
+        notificationId: notification._id?.toString(),
+        type,
+        channel,
+        errorName: error.name,
+      })
     }
 
     await notification.save()
-
     return notification
   } catch (error) {
-    console.error('Notification creation failed:', error.message)
+    // Item/claim changes have already been saved; never undo them for email.
+    console.error('Notification persistence failed', { type, errorName: error.name })
     return null
   }
 }
 
-// Claim Request Notification (to partner user)
-const sendClaimRequestNotification = async (item) => {
-  const message = `A user requested to claim ${item.name}`
+const sendMatchNotification = (user, item) => notify({
+  recipient: user,
+  item,
+  type: 'MATCH_FOUND',
+  message: `We found a possible match for your ${item.name}`,
+  legacyChannel: 'WHATSAPP',
+  subject: 'Back 2 Owner: possible match found',
+  text: 'We found a possible match for an item belonging to you. Sign in to Back 2 Owner and open My Items to review it. A match does not complete a claim or collection.',
+})
 
-  try {
-    const notification = await Notification.create({
-      user: item.user._id,
-      item: item._id,
-      type: 'CLAIM_REQUEST',
-      message,
-      channel: 'SMS',
-    })
+const sendClaimRequestNotification = (item) => notify({
+  recipient: item.user,
+  item,
+  type: 'CLAIM_REQUEST',
+  message: `A user requested to claim ${item.name}`,
+  legacyChannel: 'SMS',
+  subject: 'Back 2 Owner: claim awaiting review',
+  text: 'A claim has been requested for an item you uploaded. Sign in to Back 2 Owner and open Claim Requests to review it.',
+})
 
-    try {
-      await sendSMS(item.user.phone, message)
+const sendClaimApprovedNotification = (item) => notify({
+  recipient: item.matchedUser,
+  item,
+  type: 'CLAIM_APPROVED',
+  message: `Your claim for ${item.name} has been approved`,
+  legacyChannel: 'WHATSAPP',
+  subject: 'Back 2 Owner: claim approved',
+  text: 'Your claim has been approved. Sign in to Back 2 Owner and open My Claims to review the partner and collection details. Approval does not mean the item has already been collected.',
+})
 
-      notification.status = 'sent'
-      notification.sentAt = new Date()
-    } catch (error) {
-      notification.status = 'failed'
-
-      console.error('SMS notification failed:', error.message)
-    }
-
-    await notification.save()
-
-    return notification
-  } catch (error) {
-    console.error('Claim notification creation failed:', error.message)
-    return null
-  }
-}
-
-// Claim Approved Notification
-const sendClaimApprovedNotification = async (item) => {
-  const message = `Your claim for ${item.name} has been approved`
-
-  try {
-    const notification = await Notification.create({
-      user: item.matchedUser._id,
-      item: item._id,
-      type: 'CLAIM_APPROVED',
-      message,
-      channel: 'WHATSAPP',
-    })
-
-    try {
-      await sendWhatsApp(item.matchedUser.phone, message)
-
-      notification.status = 'sent'
-      notification.sentAt = new Date()
-    } catch (error) {
-      notification.status = 'failed'
-
-      console.error(
-        'Claim approval WhatsApp notification failed:',
-        error.message,
-      )
-    }
-
-    await notification.save()
-
-    return notification
-  } catch (error) {
-    console.error('Claim approval notification creation failed:', error.message)
-
-    return null
-  }
-}
-
-// Claim Rejected Notification
-const sendClaimRejectedNotification = async (item) => {
-  const message = `Your claim for ${item.name} has been rejected`
-
-  try {
-    const notification = await Notification.create({
-      user: item.matchedUser._id,
-      item: item._id,
-      type: 'CLAIM_REJECTED',
-      message,
-      channel: 'WHATSAPP',
-    })
-
-    try {
-      await sendWhatsApp(item.matchedUser.phone, message)
-
-      notification.status = 'sent'
-      notification.sentAt = new Date()
-    } catch (error) {
-      notification.status = 'failed'
-
-      console.error(
-        'Claim rejection WhatsApp notification failed:',
-        error.message,
-      )
-    }
-
-    await notification.save()
-
-    return notification
-  } catch (error) {
-    console.error(
-      'Claim rejection notification creation failed:',
-      error.message,
-    )
-
-    return null
-  }
-}
+const sendClaimRejectedNotification = (item) => notify({
+  recipient: item.matchedUser,
+  item,
+  type: 'CLAIM_REJECTED',
+  message: `Your claim for ${item.name} has been rejected`,
+  legacyChannel: 'WHATSAPP',
+  subject: 'Back 2 Owner: claim update',
+  text: 'Your claim was not approved. Sign in to Back 2 Owner and open My Claims to review its status and available next steps.',
+})
 
 export default {
   sendMatchNotification,
@@ -151,4 +96,3 @@ export default {
   sendClaimApprovedNotification,
   sendClaimRejectedNotification,
 }
-
