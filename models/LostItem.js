@@ -65,6 +65,7 @@ const lostItemSchema = mongoose.Schema(
     idNumber: String,
     passportNumber: String,
     documentNumber: String,
+    separateItemConfirmed: { type: Boolean, default: false },
 
     surname: String,
     initials: String,

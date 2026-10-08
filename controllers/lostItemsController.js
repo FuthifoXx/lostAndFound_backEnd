@@ -232,6 +232,7 @@ export const addLostItem = async (req, res) => {
     initials,
     firstNames,
     dateOfBirth,
+    confirmSeparateItem,
   } = req.body
 
   if (!name || !description || !location || !dateLost) {
@@ -301,9 +302,10 @@ export const addLostItem = async (req, res) => {
         status: { $in: activeStatuses },
       }).select('_id status')
 
-      if (existingItem) {
+      if (existingItem && confirmSeparateItem !== true && confirmSeparateItem !== 'true') {
         return res.status(409).json({
           message: 'An active case already exists for this document',
+          code: 'ACTIVE_DOCUMENT_CASE',
           existingItemId: existingItem._id,
           status: existingItem.status,
         })
@@ -343,6 +345,7 @@ export const addLostItem = async (req, res) => {
       firstNames: formattedFirstNames,
       dateOfBirth,
       imageKey,
+      separateItemConfirmed: confirmSeparateItem === true || confirmSeparateItem === 'true',
     })
 
     itemSaved = true
