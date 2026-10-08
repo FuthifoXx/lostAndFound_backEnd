@@ -4,10 +4,13 @@ import sendWhatsApp from '../utils/sendWhatsApp.js'
 import sendEmail from '../utils/sendEmail.js'
 
 // Store the in-app record even when external delivery fails.
-const notify = async ({ recipient, item, type, message, legacyChannel, subject, text }) => {
-  const channel = process.env.EMAIL_NOTIFICATIONS_ENABLED === 'true'
+export const createNotifier = ({ sms = sendSMS, whatsapp = sendWhatsApp, email = sendEmail } = {}) => async ({ recipient, item, type, message, legacyChannel, subject, text }) => {
+  const configuredChannel = type === 'MATCH_FOUND'
+    ? process.env.MATCH_NOTIFICATION_CHANNEL?.trim().toUpperCase()
+    : undefined
+  const channel = configuredChannel || (process.env.EMAIL_NOTIFICATIONS_ENABLED === 'true'
     ? 'EMAIL'
-    : legacyChannel
+    : legacyChannel)
 
   try {
     const notification = await Notification.create({
@@ -19,13 +22,16 @@ const notify = async ({ recipient, item, type, message, legacyChannel, subject, 
     })
 
     try {
+      if (!['EMAIL', 'SMS', 'WHATSAPP'].includes(channel)) {
+        throw new Error('Invalid notification channel')
+      }
       if (channel === 'EMAIL') {
         if (!recipient.email?.trim()) throw new Error('Recipient email is missing')
-        await sendEmail(recipient.email.trim(), subject, text)
+        await email(recipient.email.trim(), subject, text)
       } else if (channel === 'SMS') {
-        await sendSMS(recipient.phone, message)
+        await sms(recipient.phone, `Back 2 Owner: ${text}`)
       } else {
-        await sendWhatsApp(recipient.phone, message)
+        await whatsapp(recipient.phone, `Back 2 Owner: ${text}`)
       }
 
       // "sent" means accepted by the provider, not confirmed inbox delivery.
@@ -38,6 +44,7 @@ const notify = async ({ recipient, item, type, message, legacyChannel, subject, 
         type,
         channel,
         errorName: error.name,
+        providerCode: error.code,
       })
     }
 
@@ -50,14 +57,16 @@ const notify = async ({ recipient, item, type, message, legacyChannel, subject, 
   }
 }
 
+const notify = createNotifier()
+
 const sendMatchNotification = (user, item) => notify({
   recipient: user,
   item,
   type: 'MATCH_FOUND',
-  message: `We found a possible match for your ${item.name}`,
+  message: `We have found a match for your ${item.name}`,
   legacyChannel: 'WHATSAPP',
-  subject: 'Back 2 Owner: possible match found',
-  text: 'We found a possible match for an item belonging to you. Sign in to Back 2 Owner and open My Items to review it. A match does not complete a claim or collection.',
+  subject: 'Back 2 Owner: We have found a match',
+  text: 'We have found a match. Sign in to Back 2 Owner and open My Items to review your possible item. A match does not complete a claim or collection.',
 })
 
 const sendClaimRequestNotification = (item) => notify({
