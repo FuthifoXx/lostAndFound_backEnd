@@ -2,8 +2,12 @@ import mongoose from 'mongoose'
 
 const surveyResponseSchema = new mongoose.Schema({
   experience: String, // Retained for earlier survey responses.
-  surveyVersion: { type: Number, default: 2 },
+  surveyVersion: { type: Number, default: 3 },
   seenAppBefore: String,
+  comfortFactors: [String],
+  comfortOther: String,
+  keepInTouch: String,
+  researchConsent: Boolean,
   lostItem: String,
   recovered: String,
   recoveryMethod: String,
@@ -18,12 +22,10 @@ const surveyResponseSchema = new mongoose.Schema({
   recommend: { type: String, required: true },
   interest: { type: String, required: true },
   ease: String,
-  comfortFactors: [{ type: String }],
-  comfortOther: { type: String, maxlength: 300 },
   feedback: { type: String, maxlength: 1000 },
   contact: { type: String, maxlength: 120 },
   contactConsent: { type: Boolean, default: false },
-  consentVersion: { type: String, default: 'community-pilot-v1' },
+  consentVersion: { type: String, default: 'community-pilot-v3' },
 }, { timestamps: true })
 
 export default mongoose.model('SurveyResponse', surveyResponseSchema)
