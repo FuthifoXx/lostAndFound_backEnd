@@ -1,7 +1,18 @@
 import mongoose from 'mongoose'
 
 const surveyResponseSchema = new mongoose.Schema({
-  experience: { type: String, required: true },
+  experience: String, // Retained for earlier survey responses.
+  surveyVersion: { type: Number, default: 2 },
+  seenAppBefore: String,
+  lostItem: String,
+  recovered: String,
+  recoveryMethod: String,
+  queueRating: Number,
+  helpDeskRating: Number,
+  customerServiceRating: Number,
+  replacementFeeFair: String,
+  subscribe: String,
+  willingToPay: Number,
   lostBefore: { type: String, required: true },
   usefulness: { type: String, required: true },
   recommend: { type: String, required: true },

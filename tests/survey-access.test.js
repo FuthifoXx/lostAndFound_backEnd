@@ -18,7 +18,7 @@ test('survey submissions require an authenticated admin before writing', async (
   app.use(express.json()); app.use('/surveys', surveyRoutes)
   const server = app.listen(0, '127.0.0.1')
   await new Promise(resolve => server.once('listening', resolve))
-  const body = { experience: 'I have only heard about it', lostBefore: 'Yes', usefulness: 'Very useful', recommend: 'Maybe', interest: 'Just sharing feedback' }
+  const body = { seenAppBefore: 'No', replacementFeeFair: 'Yes', subscribe: 'Maybe', willingToPay: 20, lostBefore: 'No', usefulness: 'Very useful', recommend: 'Maybe', interest: 'Just sharing feedback' }
   try {
     const post = async role => fetch(`http://127.0.0.1:${server.address().port}/surveys`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(role ? { Authorization: `Bearer ${jwt.sign({ id: role }, process.env.JWT_SECRET)}` } : {}) }, body: JSON.stringify(body) })
     assert.equal((await post()).status, 401)
