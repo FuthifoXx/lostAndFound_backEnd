@@ -14,6 +14,13 @@ export function validateSurvey(body = {}) {
     if (!values.includes(body[key])) throw new Error('Please answer all required questions.')
     data[key] = body[key]
   }
+  const allowedComfortFactors = ['Strong privacy protection', 'Trusted local collection partners', 'Clear owner-verification process', 'Community / SAPS awareness', 'Reviews from other users', 'Clear explanation of how my information is used']
+  if (body.comfortFactors !== undefined) {
+    if (!Array.isArray(body.comfortFactors) || body.comfortFactors.some(value => !allowedComfortFactors.includes(value))) throw new Error('Please select valid comfort factors.')
+    data.comfortFactors = [...new Set(body.comfortFactors)]
+  }
+  if (body.comfortOther !== undefined && (typeof body.comfortOther !== 'string' || body.comfortOther.length > 300)) throw new Error('Please shorten your other comfort feedback.')
+  data.comfortOther = (body.comfortOther || '').trim()
   for (const [key, limit] of [['feedback', 1000], ['contact', 120]]) {
     if (body[key] !== undefined && (typeof body[key] !== 'string' || body[key].length > limit)) throw new Error(`Please shorten your ${key}.`)
     data[key] = (body[key] || '').trim()
