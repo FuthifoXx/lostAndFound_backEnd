@@ -1,3 +1,4 @@
+import surveyRoutes from './routes/surveyRoutes.js'
 import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
@@ -42,6 +43,7 @@ app.use(
 app.use(express.json())
 
 // Routes
+app.use('/api/surveys', surveyRoutes)
 app.use('/api/lost-items', lostItemsRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/partners', partnerRoutes)
