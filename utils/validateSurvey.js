@@ -15,7 +15,7 @@ export function validateSurvey(body = {}) {
     if (!values.includes(body[key])) throw new Error('Please answer all required questions.')
     data[key] = body[key]
   }
-  for (const [key, limit] of [['feedback', 1000], ['contact', 120]]) {
+  for (const [key, limit] of [['feedback', 1000], ['contact', 120], ['firstNames', 100], ['surname', 100]]) {
     if (body[key] !== undefined && (typeof body[key] !== 'string' || body[key].length > limit)) throw new Error(`Please shorten your ${key}.`)
     data[key] = (body[key] || '').trim()
   }

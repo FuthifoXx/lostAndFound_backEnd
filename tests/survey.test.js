@@ -43,3 +43,12 @@ test('comfort factors are allowlisted and Other requires details', () => {
   assert.equal(validateSurvey({ ...valid, willingToPay: 150 }).willingToPay, 150)
   assert.equal(validateSurvey({ ...valid, replacementFeeFair: 'Not sure' }).replacementFeeFair, 'Not sure')
 })
+
+test('respondent names are optional, trimmed and bounded', () => {
+  assert.equal(validateSurvey(valid).firstNames, '')
+  const result = validateSurvey({ ...valid, firstNames: ' Test ', surname: ' Person ' })
+  assert.equal(result.firstNames, 'Test')
+  assert.equal(result.surname, 'Person')
+  assert.throws(() => validateSurvey({ ...valid, surname: 'a'.repeat(101) }))
+  assert.throws(() => validateSurvey({ ...valid, firstNames: {} }))
+})

@@ -4,6 +4,8 @@ const surveyResponseSchema = new mongoose.Schema({
   experience: String, // Retained for earlier survey responses.
   surveyVersion: { type: Number, default: 3 },
   seenAppBefore: String,
+  firstNames: { type: String, maxlength: 100 },
+  surname: { type: String, maxlength: 100 },
   comfortFactors: [String],
   comfortOther: String,
   keepInTouch: String,
