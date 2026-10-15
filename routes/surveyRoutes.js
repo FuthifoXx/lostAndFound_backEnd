@@ -5,7 +5,7 @@ import admin from '../middleware/adminMiddleware.js'
 import { validateSurvey } from '../utils/validateSurvey.js'
 
 const router = express.Router()
-router.post('/', async (req, res, next) => {
+router.post('/', protect, admin, async (req, res, next) => {
   let data
   try { data = validateSurvey(req.body) }
   catch (error) { return res.status(400).json({ message: error.message }) }
