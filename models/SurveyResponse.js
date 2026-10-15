@@ -18,6 +18,8 @@ const surveyResponseSchema = new mongoose.Schema({
   recommend: { type: String, required: true },
   interest: { type: String, required: true },
   ease: String,
+  comfortFactors: [{ type: String }],
+  comfortOther: { type: String, maxlength: 300 },
   feedback: { type: String, maxlength: 1000 },
   contact: { type: String, maxlength: 120 },
   contactConsent: { type: Boolean, default: false },
