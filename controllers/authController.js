@@ -4,8 +4,8 @@ import jwt from 'jsonwebtoken'
 import User from '../models/User.js' // Keep capitalized for now
 import { parseSAID } from '../utils/idParser.js'
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+const generateToken = (id, authVersion = 0) => {
+  return jwt.sign({ id, authVersion }, process.env.JWT_SECRET, {
     expiresIn: '30d',
   })
 }
@@ -169,7 +169,7 @@ export const registerUser = async (req, res) => {
     return res.status(201).json({
       _id: user._id,
       email: user.email,
-      token: generateToken(user._id),
+      token: generateToken(user._id, user.authVersion),
     })
   } catch (error) {
     if (error?.code === 11000) {
@@ -189,7 +189,8 @@ export const registerUser = async (req, res) => {
 // LOGIN
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { password } = req.body
+    const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : ''
 
     if (!email || !password) {
       return res.status(400).json({ message: 'All fields are required' })
@@ -211,7 +212,7 @@ export const loginUser = async (req, res) => {
       firstNames: user.firstNames,
       email: user.email,
       role: user.role,
-      token: generateToken(user._id),
+      token: generateToken(user._id, user.authVersion),
     })
   } catch (error) {
     console.error(error)
@@ -285,7 +286,7 @@ export const updateMe = async (req, res) => {
       phone: updatedUser.phone,
       role: updatedUser.role,
       partner: updatedUser.partner,
-      token: generateToken(updatedUser._id),
+      token: generateToken(updatedUser._id, updatedUser.authVersion),
     })
   } catch (error) {
     // Protect against simultaneous requests passing the earlier lookup.

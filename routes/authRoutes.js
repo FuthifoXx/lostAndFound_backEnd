@@ -11,6 +11,8 @@ import {
   deleteUserById,
 } from '../controllers/authController.js'
 
+import { forgotPassword, resetPassword, recoveryLimit } from '../controllers/passwordResetController.js'
+
 import protect from '../middleware/authMiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
 
@@ -18,6 +20,8 @@ const router = express.Router()
 
 router.post('/register', registerUser)
 router.post('/login', loginUser)
+router.post('/forgot-password', recoveryLimit, forgotPassword)
+router.post('/reset-password', recoveryLimit, resetPassword)
 
 router.get('/me', protect, getMe)
 router.put('/me', protect, updateMe)
