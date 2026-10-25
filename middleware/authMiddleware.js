@@ -23,9 +23,9 @@ const protect = async (req, res, next) => {
 
     const user = await User.findById(decoded.id).select('-password')
 
-    if (!user) {
+    if (!user || (decoded.authVersion ?? 0) !== (user.authVersion ?? 0)) {
       return res.status(401).json({
-        message: 'User not found',
+        message: 'Not authorized, please sign in again',
       })
     }
 

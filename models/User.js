@@ -80,6 +80,8 @@ const userSchema = mongoose.Schema(
       required: true,
     },
 
+    authVersion: { type: Number, default: 0 },
+
     role: {
       type: String,
       enum: ['user', 'admin', 'partner'],
