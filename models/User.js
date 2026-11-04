@@ -2,10 +2,15 @@ import mongoose from 'mongoose'
 
 const userSchema = mongoose.Schema(
   {
+    displayName: { type:String, trim:true, maxlength:80 },
+    emailVerifiedAt: Date,
+    matchingActive: Boolean,
+    candidateMatching: Boolean,
+    matchingConsentAt: Date,
+    matchingConsentVersion: String,
     identityType: {
       type: String,
       enum: ['RSA_ID', 'PASSPORT', 'OTHER'],
-      required: true,
       trim: true,
       uppercase: true,
     },
@@ -13,7 +18,7 @@ const userSchema = mongoose.Schema(
     idNumber: {
       type: String,
       required: function () {
-        return this.identityType === 'RSA_ID'
+        return this.identityType === 'RSA_ID' && this.matchingActive !== false
       },
       trim: true,
       unique: true,
@@ -23,7 +28,7 @@ const userSchema = mongoose.Schema(
     passportNumber: {
       type: String,
       required: function () {
-        return this.identityType === 'PASSPORT'
+        return this.identityType === 'PASSPORT' && this.matchingActive !== false
       },
       trim: true,
       uppercase: true,
@@ -31,14 +36,12 @@ const userSchema = mongoose.Schema(
 
     surname: {
       type: String,
-      required: true,
       uppercase: true,
       trim: true,
     },
 
     initials: {
       type: String,
-      required: true,
       uppercase: true,
       trim: true,
     },
@@ -64,7 +67,6 @@ const userSchema = mongoose.Schema(
 
     phone: {
       type: String,
-      required: true,
     },
 
     email: {

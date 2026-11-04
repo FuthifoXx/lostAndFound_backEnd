@@ -2,7 +2,8 @@ import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js' // Keep capitalized for now
-import { parseSAID } from '../utils/idParser.js'
+import { cleanText, safeProfile } from '../utils/recoveryProfile.js'
+import { sendVerification } from './recoveryProfileController.js'
 
 const generateToken = (id, authVersion = 0) => {
   return jwt.sign({ id, authVersion }, process.env.JWT_SECRET, {
@@ -13,176 +14,19 @@ const generateToken = (id, authVersion = 0) => {
 // REGISTER
 
 export const registerUser = async (req, res) => {
+  const displayName = cleanText(req.body?.displayName,80)
+  const email = cleanText(req.body?.email,254).toLowerCase()
+  const password = req.body?.password
+  if (!displayName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message:'Enter a display name and a valid email address.' })
+  if (typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password,'utf8') > 72) return res.status(400).json({ message:'Use at least 8 characters and no more than 72 bytes for your password.' })
   try {
-    let {
-      identityType,
-      idNumber,
-      passportNumber,
-      documentNumber,
-      surname,
-      initials,
-      firstNames,
-      phone,
-      email,
-      password,
-    } = req.body
-
-    identityType =
-      typeof identityType === 'string'
-        ? identityType.trim().toUpperCase()
-        : identityType
-
-    idNumber =
-      typeof idNumber === 'string' ? idNumber.trim() || undefined : idNumber
-
-    passportNumber =
-      typeof passportNumber === 'string'
-        ? passportNumber.trim().toUpperCase() || undefined
-        : passportNumber
-
-    documentNumber =
-      typeof documentNumber === 'string'
-        ? documentNumber.trim().toUpperCase() || undefined
-        : documentNumber
-
-    email = typeof email === 'string' ? email.trim().toLowerCase() : email
-
-    if (
-      !identityType ||
-      !surname ||
-      !initials ||
-      !firstNames ||
-      !phone ||
-      !email ||
-      !password
-    ) {
-      return res.status(400).json({ message: 'Missing required fields' })
-    }
-    if (typeof password !== 'string' || password.length < 6) {
-      return res.status(400).json({
-        message: 'Password must be at least 6 characters long',
-      })
-    }
-
-    const allowedIdentityTypes = ['RSA_ID', 'PASSPORT', 'OTHER']
-
-    if (!allowedIdentityTypes.includes(identityType)) {
-      return res.status(400).json({
-        message: 'Invalid identity type',
-      })
-    }
-
-    let dateOfBirth
-    let gender
-    let identityFilter
-
-    // ✅ ONLY parse if RSA ID
-    if (identityType === 'RSA_ID') {
-      if (!idNumber) {
-        return res.status(400).json({ message: 'ID number required' })
-      }
-      try {
-        const parsed = parseSAID(idNumber)
-        dateOfBirth = parsed.dateOfBirth
-        gender = parsed.gender
-      } catch (error) {
-        return res.status(400).json({
-          message: 'Invalid SA ID number',
-        })
-      }
-      identityFilter = {
-        identityType: 'RSA_ID',
-        idNumber,
-      }
-    }
-
-    //  Passport validation
-    if (identityType === 'PASSPORT') {
-      if (!passportNumber) {
-        return res.status(400).json({
-          message: 'Passport number required',
-        })
-      }
-
-      identityFilter = {
-        identityType: 'PASSPORT',
-        passportNumber,
-      }
-    }
-
-    //Other validation
-    if (identityType === 'OTHER') {
-      if (!documentNumber) {
-        return res.status(400).json({
-          message: 'Document number required',
-        })
-      }
-
-      identityFilter = {
-        identityType: 'OTHER',
-        documentNumber,
-      }
-    }
-
-    const identityExists = await User.exists(identityFilter)
-
-    if (identityExists) {
-      return res.status(409).json({
-        message: 'Identity document already registered',
-      })
-    }
-
-    const userExists = await User.findOne({ email })
-    if (userExists) {
-      return res.status(400).json({ message: 'User already exists' })
-    }
-
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(password, salt)
-
-    const formattedFirstNames = Array.isArray(firstNames)
-      ? firstNames
-      : firstNames
-          ?.split(' ')
-          .map((name) => name.trim())
-          .filter(Boolean)
-
-    const identityData = {
-      RSA_ID: { idNumber },
-      PASSPORT: { passportNumber },
-      OTHER: { documentNumber },
-    }[identityType]
-
-    const user = await User.create({
-      identityType,
-      ...identityData,
-      surname,
-      initials,
-      firstNames: formattedFirstNames,
-      phone,
-      email,
-      password: hashedPassword,
-      dateOfBirth,
-      gender,
-      role: 'user',
-    })
-    return res.status(201).json({
-      _id: user._id,
-      email: user.email,
-      token: generateToken(user._id, user.authVersion),
-    })
-  } catch (error) {
-    if (error?.code === 11000) {
-      return res.status(409).json({
-        message: 'User already exists',
-      })
-    }
-
-    console.error(error)
-
-    return res.status(500).json({
-      message: 'Server error',
-    })
+    if (await User.exists({email})) return res.status(409).json({ message:'Unable to create an account with these details. Try signing in or recovering your password.' })
+    const user = await User.create({ displayName,email,password:await bcrypt.hash(password,10),role:'user',matchingActive:false,candidateMatching:false })
+    try { await sendVerification(user) } catch { console.error('New account confirmation email could not be confirmed.') }
+    return res.status(201).json({ _id:user._id, displayName:user.displayName, email:user.email,role:user.role, message:'Account created. Sign in to confirm your email and choose your recovery options.' })
+  } catch(error) {
+    if(error.code === 11000) return res.status(409).json({ message:'Unable to create an account with these details. Try signing in or recovering your password.' })
+    return res.status(500).json({ message:'Account could not be created. Please try again.' })
   }
 }
 
@@ -208,6 +52,7 @@ export const loginUser = async (req, res) => {
 
     res.json({
       _id: user._id,
+      displayName: user.displayName,
       surname: user.surname,
       firstNames: user.firstNames,
       email: user.email,
@@ -222,7 +67,8 @@ export const loginUser = async (req, res) => {
 
 // GET MY PROFILE
 export const getMe = async (req, res) => {
-  res.json(req.user)
+  res.set('Cache-Control','private, no-store')
+  res.json(safeProfile(req.user))
 }
 
 // UPDATE MY PROFILE
@@ -258,9 +104,19 @@ export const updateMe = async (req, res) => {
         })
       }
 
+      if (user.email !== normalizedEmail) {
+        user.emailVerifiedAt = undefined
+        user.matchingActive = false
+        user.candidateMatching = false
+      }
       user.email = normalizedEmail
     }
 
+    if (req.body.displayName !== undefined && req.body.displayName !== '') {
+      const displayName = cleanText(req.body.displayName,80)
+      if (!displayName) return res.status(400).json({ message:'Enter a display name of up to 80 characters.' })
+      user.displayName = displayName
+    }
     user.surname = surname || user.surname
     user.initials = initials || user.initials
     user.firstNames = firstNames || user.firstNames
@@ -279,6 +135,7 @@ export const updateMe = async (req, res) => {
     const updatedUser = await user.save()
 
     return res.json({
+      displayName: updatedUser.displayName,
       _id: updatedUser._id,
       surname: updatedUser.surname,
       firstNames: updatedUser.firstNames,
@@ -394,6 +251,11 @@ export const updateUserById = async (req, res) => {
         return res.status(409).json({
           message: 'Email already registered',
         })
+      }
+      if (user.email !== normalizedEmail) {
+        user.emailVerifiedAt = undefined
+        user.matchingActive = false
+        user.candidateMatching = false
       }
       user.email = normalizedEmail
     }
