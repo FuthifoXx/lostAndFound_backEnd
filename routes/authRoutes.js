@@ -11,14 +11,22 @@ import {
   deleteUserById,
 } from '../controllers/authController.js'
 
-import { forgotPassword, resetPassword, recoveryLimit } from '../controllers/passwordResetController.js'
+import { forgotPassword, resetPassword, recoveryLimit, progressiveLimit } from '../controllers/passwordResetController.js'
+
+import { requestVerification, verifyEmail, saveRecoveryProfile, getPossibleMatches, getLossReports, createLossReport } from '../controllers/recoveryProfileController.js'
 
 import protect from '../middleware/authMiddleware.js'
 import admin from '../middleware/adminMiddleware.js'
 
 const router = express.Router()
 
-router.post('/register', registerUser)
+router.post('/register', progressiveLimit, registerUser)
+router.post('/verify-email', progressiveLimit, verifyEmail)
+router.post('/email-confirmation', protect, progressiveLimit, requestVerification)
+router.put('/recovery-profile', protect, progressiveLimit, saveRecoveryProfile)
+router.get('/possible-matches', protect, getPossibleMatches)
+router.get('/loss-reports', protect, getLossReports)
+router.post('/loss-reports', protect, progressiveLimit, createLossReport)
 router.post('/login', loginUser)
 router.post('/forgot-password', recoveryLimit, forgotPassword)
 router.post('/reset-password', recoveryLimit, resetPassword)

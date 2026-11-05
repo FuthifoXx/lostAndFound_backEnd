@@ -7,6 +7,7 @@ import multer from 'multer'
 dotenv.config()
 
 import connectDB from './config/db.js'
+import EmailVerification from './models/EmailVerification.js'
 import PasswordReset from './models/PasswordReset.js'
 import RecoveryLimit from './models/RecoveryLimit.js'
 import lostItemsRoutes from './routes/lostItems.js'
@@ -92,7 +93,7 @@ app.use((error, req, res, next) => {
 const startServer = async () => {
   await connectDB()
   // Recovery relies on unique token/user indexes before accepting requests.
-  await Promise.all([PasswordReset.init(), RecoveryLimit.init()])
+  await Promise.all([PasswordReset.init(), RecoveryLimit.init(), EmailVerification.init()])
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`)

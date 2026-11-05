@@ -13,7 +13,7 @@ export const recoveryLimit = async (req, res, next) => {
   res.set('Cache-Control', 'no-store')
   try {
     const bucket = Math.floor(Date.now() / (15 * 60 * 1000))
-    const key = hash(`${req.ip}:${bucket}`)
+    const key = hash(`${req.recoveryLimitScope || req.ip}:${bucket}`)
     const limit = await RecoveryLimit.findOneAndUpdate({ _id: key }, {
       $inc: { count: 1 },
       $setOnInsert: { expiresAt: new Date((bucket + 2) * 15 * 60 * 1000) },
@@ -26,6 +26,14 @@ export const recoveryLimit = async (req, res, next) => {
   } catch {
     res.status(503).json({ message: 'Account recovery is temporarily unavailable. Please try again later.' })
   }
+}
+
+// Keep setup activity separate from password recovery. Authenticated setup limits
+// follow the account so a hosting proxy does not combine all volunteers' requests.
+export const progressiveLimit = (req, res, next) => {
+  const subject = req.user?._id ? `account:${req.user._id}` : `ip:${req.ip}`
+  req.recoveryLimitScope = `progressive:${subject}:${req.path}`
+  return recoveryLimit(req, res, next)
 }
 
 export const forgotPassword = async (req, res) => {

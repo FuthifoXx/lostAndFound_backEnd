@@ -7,6 +7,7 @@ export const findMatchingUser = async (item) => {
     if (item.identityType === 'RSA_ID' && item.idNumber) {
       matchedUser = await User.findOne({
         identityType: 'RSA_ID',
+        matchingActive: { $ne: false },
         idNumber: item.idNumber,
       })
     }
@@ -18,6 +19,7 @@ export const findMatchingUser = async (item) => {
     ) {
       matchedUser = await User.findOne({
         identityType: 'PASSPORT',
+        matchingActive: { $ne: false },
         passportNumber: item.passportNumber,
       })
     }
@@ -25,6 +27,7 @@ export const findMatchingUser = async (item) => {
     if (!matchedUser && item.identityType === 'OTHER' && item.documentNumber) {
       matchedUser = await User.findOne({
         identityType: 'OTHER',
+        matchingActive: { $ne: false },
         documentNumber: item.documentNumber,
       })
     }

@@ -8,7 +8,7 @@ export const createNotifier = ({ sms = sendSMS, whatsapp = sendWhatsApp, email =
   const configuredChannel = type === 'MATCH_FOUND'
     ? process.env.MATCH_NOTIFICATION_CHANNEL?.trim().toUpperCase()
     : undefined
-  const channel = configuredChannel || (process.env.EMAIL_NOTIFICATIONS_ENABLED === 'true'
+  const channel = (recipient.emailVerifiedAt && (recipient.matchingConsentVersion === 'progressive-v1' || !recipient.phone) ? 'EMAIL' : configuredChannel) || (process.env.EMAIL_NOTIFICATIONS_ENABLED === 'true'
     ? 'EMAIL'
     : legacyChannel)
 
